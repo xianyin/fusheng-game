@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 全局背景色，避免加载时的白色闪烁 */
+body {
+  background-color: #f7f3e8;
+}
