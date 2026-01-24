@@ -12,12 +12,13 @@ import {
   Gift,
   MessageCircle,
   Sparkles,
-  ScrollText,
   X
 } from 'lucide-react';
 
 // --- Gemini API Configuration ---
-const apiKey = ""; // Runtime environment will provide the key
+// 注意：在 Vercel 部署时，请取消下面注释并使用 import.meta.env 获取 Key
+// const apiKey = import.meta.env.VITE_GEMINI_KEY || "";
+const apiKey = ""; // 在当前预览环境中请保持为空，系统会自动注入
 
 // --- 游戏数据常量 ---
 
