@@ -1,3 +1,5 @@
+'use client'; // 添加此行以确保兼容 Next.js 等框架的客户端渲染模式
+
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Map, 
@@ -16,9 +18,10 @@ import {
 } from 'lucide-react';
 
 // --- Gemini API Configuration ---
-// 注意：在 Vercel 部署时，请取消下面注释并使用 import.meta.env 获取 Key
-// const apiKey = import.meta.env.VITE_GEMINI_KEY || "";
-const apiKey = ""; // 在当前预览环境中请保持为空，系统会自动注入
+// 部署说明：
+// 1. 如果你在 Vercel 环境变量中设置了 VITE_GEMINI_KEY，请确保构建工具能正确读取。
+// 2. 为了避免构建错误，最简单的方法是直接将 Key 填入下方的引号中（注意不要提交给他人）。
+const apiKey = ""; 
 
 // --- 游戏数据常量 ---
 
