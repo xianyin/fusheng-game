@@ -449,7 +449,7 @@ export default function App() {
       {/* Header */}
       <header className="bg-stone-800 text-[#f7f3e8] p-3 shadow-md z-10">
         <div className="flex justify-between items-center mb-2">
-          <h1 className="text-xl font-bold tracking-widest">浮生商记</h1>
+          <h1 className="text-xl font-bold tracking-widest">牛牛浮生记</h1>
           <span className="text-sm bg-stone-700 px-2 py-1 rounded">第 {day}/{MAX_DAYS} 日</span>
         </div>
         <div className="grid grid-cols-4 gap-2 text-sm text-center">
