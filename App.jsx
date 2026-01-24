@@ -12,16 +12,8 @@ import {
   AlertCircle,
   Heart,
   Gift,
-  MessageCircle,
-  Sparkles,
   X
 } from 'lucide-react';
-
-// --- Gemini API Configuration ---
-// 部署说明：
-// 1. 如果你在 Vercel 环境变量中设置了 VITE_GEMINI_KEY，请确保构建工具能正确读取。
-// 2. 为了避免构建错误，最简单的方法是直接将 Key 填入下方的引号中（注意不要提交给他人）。
-const apiKey = ""; 
 
 // --- 游戏数据常量 ---
 
@@ -63,8 +55,7 @@ const BEAUTIES = [
     dateCost: 50, 
     maxIntimacy: 100, 
     buffDesc: '贤内助：每次休整额外恢复 10 点健康，且减少旅途健康消耗。', 
-    buffType: 'health_support',
-    persona: "你叫芸娘，是沈复的妻子。你性格温婉贤惠，深爱丈夫，富有生活情趣，喜欢布衣菜饭，可乐终身。你说话带有中国古代白话文风格，语气温柔。不要使用现代词汇。"
+    buffType: 'health_support'
   },
   { 
     id: 'su', 
@@ -76,8 +67,7 @@ const BEAUTIES = [
     maxIntimacy: 150, 
     buffDesc: '旺夫运：所有房产收益增加 20%。', 
     buffType: 'income_boost',
-    buffValue: 0.2,
-    persona: "你叫苏小小，是钱塘名妓。你才情绝艳，性格孤傲但对知己深情。你住在西湖边，喜欢吟诗作对。你说话文雅，带有诗意，略带一丝清冷。不要使用现代词汇。"
+    buffValue: 0.2
   },
   { 
     id: 'dong', 
@@ -89,8 +79,7 @@ const BEAUTIES = [
     maxIntimacy: 200, 
     buffDesc: '精打细算：行囊容量增加 50 格。', 
     buffType: 'inventory_boost',
-    buffValue: 50,
-    persona: "你叫董小宛，是秦淮八艳之一。你擅长烹饪（董糖、董肉）和理财。你性格温柔坚定，善解人意。你说话得体大方，像一位贤内助。不要使用现代词汇。"
+    buffValue: 50
   },
 ];
 
@@ -121,20 +110,8 @@ export default function App() {
   const [logs, setLogs] = useState(['浮生若梦，为欢几何。你带着1000两纹银，开始了在江南的行商之旅。']);
   const [showGameOver, setShowGameOver] = useState(false);
 
-  // Gemini AI Chat State
-  const [chatModalOpen, setChatModalOpen] = useState(false);
-  const [currentChatBeauty, setCurrentChatBeauty] = useState(null);
-  const [chatInput, setChatInput] = useState("");
-  const [chatHistory, setChatHistory] = useState([]);
-  const [isAiLoading, setIsAiLoading] = useState(false);
-
-  // Gemini AI Advisor State
-  const [advisorModalOpen, setAdvisorModalOpen] = useState(false);
-  const [advisorResponse, setAdvisorResponse] = useState("");
-
   // 引用
   const logsEndRef = useRef(null);
-  const chatEndRef = useRef(null);
 
   // --- 初始化与生命周期 ---
 
@@ -145,12 +122,6 @@ export default function App() {
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
-
-  useEffect(() => {
-    if (chatModalOpen) {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [chatHistory, chatModalOpen]);
 
   const initGame = () => {
     const initialPrices = {};
@@ -174,41 +145,6 @@ export default function App() {
     });
     setRelationships(initRel);
   };
-
-  // --- Gemini API Call Helper ---
-  async function callGemini(prompt, systemInstruction = "") {
-    if (!apiKey) {
-      return "【系统】请先配置 API Key 才能使用 AI 功能。";
-    }
-    
-    setIsAiLoading(true);
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            systemInstruction: systemInstruction ? { parts: [{ text: systemInstruction }] } : undefined,
-          }),
-        }
-      );
-
-      const data = await response.json();
-      if (data.error) {
-        throw new Error(data.error.message);
-      }
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || "（佳人似乎走神了...）";
-    } catch (error) {
-      console.error("Gemini API Error:", error);
-      return "（云深不知处，信鸽迷路了。请稍后再试。）";
-    } finally {
-      setIsAiLoading(false);
-    }
-  }
 
   // --- 辅助计算 ---
 
@@ -451,84 +387,6 @@ export default function App() {
     addLog(`与${beauty.name}花前月下，好感倍增 (+${intimacyGain})`);
   };
 
-  // --- AI 聊天逻辑 ---
-  const openChat = (beautyId) => {
-    const beauty = BEAUTIES.find(b => b.id === beautyId);
-    setCurrentChatBeauty(beauty);
-    setChatModalOpen(true);
-    // Initial greeting from AI
-    const greetings = [
-        "夫君今日可好？",
-        "官人可是想奴家了？",
-        "今日风和日丽，正好与君一叙。",
-        "久候多时了..."
-    ];
-    setChatHistory([{ role: 'ai', text: greetings[Math.floor(Math.random() * greetings.length)] }]);
-  };
-
-  const sendChatMessage = async () => {
-    if (!chatInput.trim() || isAiLoading) return;
-    
-    const userMsg = chatInput;
-    setChatInput("");
-    setChatHistory(prev => [...prev, { role: 'user', text: userMsg }]);
-
-    // Increase Intimacy slightly for chatting (free bonus)
-    const beautyId = currentChatBeauty.id;
-    const rel = relationships[beautyId];
-    if (rel.intimacy < currentChatBeauty.maxIntimacy) {
-         setRelationships(prev => ({
-            ...prev,
-            [beautyId]: { 
-                ...prev[beautyId], 
-                intimacy: Math.min(currentChatBeauty.maxIntimacy, prev[beautyId].intimacy + 2) 
-            }
-         }));
-    }
-
-    // Call Gemini
-    const systemPrompt = `
-      ${currentChatBeauty.persona}
-      用户是你的心上人/丈夫。当前好感度为 ${rel.intimacy}/${currentChatBeauty.maxIntimacy}。
-      请以简短、古风、深情的口吻回复。回复不要超过60个字。
-    `;
-    
-    const aiResponse = await callGemini(userMsg, systemPrompt);
-    setChatHistory(prev => [...prev, { role: 'ai', text: aiResponse }]);
-  };
-
-  // --- AI 问策逻辑 ---
-  const askAdvisor = async () => {
-    setAdvisorModalOpen(true);
-    setAdvisorResponse(""); // Clear previous
-    
-    const currentCityName = CITIES.find(c => c.id === location).name;
-    const marketState = Object.entries(marketPrices[location]).map(([id, price]) => {
-        const good = GOODS.find(g => g.id === id);
-        return `${good.name}: ${price}两`;
-    }).join(", ");
-    
-    const inventoryState = Object.entries(inventory).map(([id, qty]) => {
-        if(qty === 0) return null;
-        const good = GOODS.find(g => g.id === id);
-        return `${good.name} ${qty}${good.unit}`;
-    }).filter(Boolean).join(", ") || "空空如也";
-
-    const prompt = `
-      我现在在${currentCityName}。
-      身上现银：${cash}两。
-      当前${currentCityName}物价：${marketState}。
-      我的行囊：${inventoryState}。
-      
-      请作为一位古代商圣，用文言文/半文言文风格，简短地给我一点生意上的建议（不超过50字）。
-      建议应该包括：该买入什么（价格低的），或者该卖出什么。
-    `;
-
-    const response = await callGemini(prompt, "你是一位精通江南商道的古代商圣，说话高深莫测但切中要害。");
-    setAdvisorResponse(response);
-  };
-
-
   const marryBeauty = (beautyId) => {
     const beauty = BEAUTIES.find(b => b.id === beautyId);
     setRelationships(prev => ({
@@ -625,9 +483,6 @@ export default function App() {
             <div className="bg-white p-3 rounded shadow border border-stone-200">
               <h2 className="text-lg font-bold border-b border-stone-200 pb-2 mb-2 flex items-center justify-between">
                 <span className="flex items-center"><ShoppingBag className="mr-2" size={18}/> {currentCity.name} 集市</span>
-                <button onClick={askAdvisor} className="text-xs flex items-center bg-stone-800 text-amber-400 px-2 py-1 rounded animate-pulse">
-                    <Sparkles size={12} className="mr-1"/> 商圣问策
-                </button>
               </h2>
               <div className="grid gap-3">
                 {GOODS.map(good => {
@@ -736,12 +591,6 @@ export default function App() {
                              {!rel.married ? (
                                <>
                                 <button 
-                                  onClick={() => openChat(beauty.id)}
-                                  className="flex-1 bg-purple-100 text-purple-800 border border-purple-200 py-1.5 rounded text-sm hover:bg-purple-200 flex items-center justify-center"
-                                >
-                                  <MessageCircle size={14} className="mr-1"/> <span className="flex items-center">传书 <Sparkles size={8} className="ml-1 text-yellow-500"/></span>
-                                </button>
-                                <button 
                                   onClick={() => dateBeauty(beauty.id)}
                                   disabled={cash < beauty.dateCost || rel.intimacy >= beauty.maxIntimacy}
                                   className="flex-1 bg-pink-100 text-pink-800 border border-pink-200 py-1.5 rounded text-sm hover:bg-pink-200 disabled:opacity-50 flex items-center justify-center"
@@ -759,12 +608,9 @@ export default function App() {
                                </>
                              ) : (
                                <>
-                               <button 
-                                  onClick={() => openChat(beauty.id)}
-                                  className="w-full bg-purple-100 text-purple-800 border border-purple-200 py-1.5 rounded text-sm hover:bg-purple-200 flex items-center justify-center"
-                                >
-                                  <MessageCircle size={14} className="mr-1"/> <span className="flex items-center">夫妻夜话 <Sparkles size={8} className="ml-1 text-yellow-500"/></span>
-                                </button>
+                                <div className="w-full text-center py-1.5 text-sm text-red-800 bg-red-50 rounded italic">
+                                  琴瑟和鸣，岁月静好。
+                               </div>
                                </>
                              )}
                           </div>
@@ -931,96 +777,6 @@ export default function App() {
         )}
 
       </main>
-
-      {/* Advisor Modal */}
-      {advisorModalOpen && (
-        <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-[#f7f3e8] w-full max-w-sm rounded-lg shadow-2xl overflow-hidden border-2 border-stone-600">
-                <div className="bg-stone-800 text-amber-50 p-3 flex justify-between items-center">
-                    <h3 className="font-bold flex items-center"><Sparkles size={16} className="mr-2 text-yellow-500"/> 商圣问策</h3>
-                    <button onClick={() => setAdvisorModalOpen(false)}><X size={18}/></button>
-                </div>
-                <div className="p-4">
-                    {!advisorResponse ? (
-                        <div className="text-center py-8 text-stone-500 animate-pulse">
-                            商圣正在掐指一算...
-                        </div>
-                    ) : (
-                        <div className="prose prose-sm font-serif text-stone-800">
-                            <p className="italic text-lg mb-2">“{advisorResponse}”</p>
-                            <p className="text-xs text-right text-stone-500 mt-4">- 仅供参考，盈亏自负</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-      )}
-
-      {/* Chat Modal */}
-      {chatModalOpen && currentChatBeauty && (
-        <div className="absolute inset-0 z-50 bg-black/50 flex flex-col justify-end sm:justify-center sm:p-4">
-            <div className="bg-[#f7f3e8] w-full sm:max-w-sm sm:rounded-lg shadow-2xl h-[80vh] sm:h-[600px] flex flex-col border-t-2 sm:border-2 border-stone-600">
-                {/* Chat Header */}
-                <div className="bg-pink-900 text-pink-50 p-3 flex justify-between items-center shadow">
-                    <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-pink-200 mr-2 flex items-center justify-center text-pink-800 font-bold border border-pink-400">
-                            {currentChatBeauty.name[0]}
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-sm">{currentChatBeauty.name}</h3>
-                            <p className="text-xs text-pink-200">亲密度: {relationships[currentChatBeauty.id].intimacy}/{currentChatBeauty.maxIntimacy}</p>
-                        </div>
-                    </div>
-                    <button onClick={() => setChatModalOpen(false)}><X size={18}/></button>
-                </div>
-
-                {/* Chat Area */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[url('https://www.transparenttextures.com/patterns/cream-paper.png')]">
-                    {chatHistory.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[80%] rounded-lg p-3 text-sm shadow-sm ${
-                                msg.role === 'user' 
-                                ? 'bg-stone-800 text-stone-50 rounded-tr-none' 
-                                : 'bg-white text-stone-800 border border-stone-200 rounded-tl-none'
-                            }`}>
-                                {msg.text}
-                            </div>
-                        </div>
-                    ))}
-                    {isAiLoading && (
-                         <div className="flex justify-start">
-                            <div className="bg-white text-stone-500 border border-stone-200 rounded-lg rounded-tl-none p-3 text-xs italic animate-pulse">
-                                {currentChatBeauty.name} 正在研墨提笔...
-                            </div>
-                        </div>
-                    )}
-                    <div ref={chatEndRef} />
-                </div>
-
-                {/* Input Area */}
-                <div className="p-3 bg-stone-100 border-t border-stone-300">
-                    <div className="flex space-x-2">
-                        <input 
-                            type="text" 
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-                            placeholder="倾诉衷肠..."
-                            className="flex-1 border border-stone-300 rounded p-2 text-sm focus:outline-none focus:border-stone-500 bg-white"
-                            disabled={isAiLoading}
-                        />
-                        <button 
-                            onClick={sendChatMessage}
-                            disabled={!chatInput.trim() || isAiLoading}
-                            className="bg-stone-800 text-white px-4 rounded text-sm disabled:opacity-50"
-                        >
-                            发送
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-      )}
 
       {/* Log Section */}
       <div className="h-32 bg-stone-900 text-stone-300 text-xs p-3 overflow-y-auto font-mono border-t border-stone-600">
