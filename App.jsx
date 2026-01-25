@@ -1,847 +1,725 @@
-'use client'; // 添加此行以确保兼容 Next.js 等框架的客户端渲染模式
+'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Map, 
-  Coins, 
-  TrendingUp, 
-  Home, 
-  ShoppingBag, 
-  Navigation, 
-  History,
-  AlertCircle,
-  Heart,
-  Gift,
-  X
+  Map, Coins, TrendingUp, Home, ShoppingBag, Navigation, History, 
+  AlertCircle, Heart, Gift, X, Trophy, CloudLightning, Sun, Umbrella, 
+  Zap, Info, RefreshCw, Backpack, Crown, Hammer, Snowflake, Flower, 
+  Leaf, UserPlus, Star, Scroll, Anchor, Sprout, Factory, Baby
 } from 'lucide-react';
 
-// --- 游戏数据常量 ---
+// --- 1. 核心常量定义 (整合版) ---
 
-const CITIES = [
-  { id: 'suzhou', name: '苏州', desc: '吴中名胜，园林甲天下，丝绸便宜。' },
-  { id: 'hangzhou', name: '杭州', desc: '西湖美景，茶香四溢，茶叶便宜。' },
-  { id: 'yangzhou', name: '扬州', desc: '运河枢纽，商贾云集，盐商聚集。' },
-  { id: 'nanjing', name: '南京', desc: '六朝古都，繁华之地，瓷器紧俏。' },
+const SEASONS = ['春', '夏', '秋', '冬'];
+const SOLAR_TERMS = [
+  { name: '立春', desc: '万物复苏，健康恢复+5' }, { name: '雨水', desc: '春雨贵如油，农田产出+20%' }, 
+  { name: '惊蛰', desc: '春雷乍动，行商遇险率增加' }, { name: '春分', desc: '昼夜平分，心情愉悦' }, 
+  { name: '清明', desc: '茶叶丰收，生茶产量翻倍' }, { name: '谷雨', desc: '雨生百谷，粮食价格下跌' },
+  { name: '立夏', desc: '夏日初长，赶路消耗增加' }, { name: '小满', desc: '江河渐满，水路运费降低' },
+  { name: '芒种', desc: '忙种忙收，雇佣成本增加' }, { name: '夏至', desc: '日照最长，光照充足' },
+  { name: '小暑', desc: '因热少动，客流减少' }, { name: '大暑', desc: '酷热难耐，健康消耗翻倍' },
+  { name: '立秋', desc: '凉风至，健康恢复+5' }, { name: '处暑', desc: '出游迎秋，特产销量增加' },
+  { name: '白露', desc: '露凝而白，草药品质提升' }, { name: '秋分', desc: '蟹肥菊黄，酒类热销' },
+  { name: '寒露', desc: '气温骤降，丝绸需求上涨' }, { name: '霜降', desc: '万物毕成，所有产出+10%' },
+  { name: '立冬', desc: '水始冰，水路停运' }, { name: '小雪', desc: '闭门过冬，客流大幅减少' },
+  { name: '大雪', desc: '瑞雪兆丰年，为来年积蓄' }, { name: '冬至', desc: '数九寒天，健康消耗翻倍' },
+  { name: '小寒', desc: '天寒地冻，药材价格暴涨' }, { name: '大寒', desc: '岁末宴请，酒肉价格暴涨' }
 ];
 
-const GOODS = [
-  { id: 'rice', name: '太湖梗米', basePrice: 10, volatility: 0.2, unit: '石' },
-  { id: 'tea', name: '西湖龙井', basePrice: 50, volatility: 0.4, unit: '斤' },
-  { id: 'wine', name: '绍兴黄酒', basePrice: 30, volatility: 0.3, unit: '坛' },
-  { id: 'silk', name: '苏绣丝绸', basePrice: 150, volatility: 0.5, unit: '匹' },
-  { id: 'porcelain', name: '景德瓷器', basePrice: 300, volatility: 0.6, unit: '件' },
-  { id: 'salt', name: '淮南官盐', basePrice: 80, volatility: 0.25, unit: '引' },
+const TALENTS = [
+  { id: 't_rich', name: '商贾世家', desc: '初始资金 +2000，且开局自带一本生意经（经验+）', type: 'cash', val: 2000 },
+  { id: 't_strong', name: '武林世家', desc: '初始健康上限 150，且遭遇劫匪胜率翻倍', type: 'health', val: 50 },
+  { id: 't_charm', name: '潘安再世', desc: '所有红颜初始好感度 +20，且约会消耗减半', type: 'charm', val: 20 },
+  { id: 't_clever', name: '鬼谷传人', desc: '技艺熟练度获取速度 +50%，制作成功率 +20%', type: 'skill', val: 0.5 },
+  { id: 't_lucky', name: '天选之子', desc: '奇遇触发概率提升，且必定是好运', type: 'luck', val: 1 },
 ];
 
-const STOCKS = [
-  { id: 'canal', name: '漕运招商局', basePrice: 100, risk: 0.3 },
-  { id: 'weaving', name: '江南织造署', basePrice: 200, risk: 0.5 },
-  { id: 'salt_gang', name: '两淮盐帮', basePrice: 150, risk: 0.4 },
+const GENERATION_GOALS = [
+  { gen: 1, title: '初入商海', desc: '存活满 1 年，且总资产达到 5,000 两', check: (s) => s.day >= 360 && s.assets >= 5000, reward: '传家宝【算盘】(交易利润+5%)' },
+  { gen: 2, title: '开枝散叶', desc: '拥有 2 处产业，且结识 2 位红颜', check: (s) => s.props >= 2 && s.lovers >= 2, reward: '传家宝【玉佩】(好感获取+10%)' },
+  { gen: 3, title: '一方巨擘', desc: '总资产达到 100,000 两，晋升为【州府商首】', check: (s) => s.assets >= 100000 && s.rank >= 2, reward: '传家宝【官印】(免除关税)' },
+  { gen: 4, title: '名扬天下', desc: '解锁所有城市，掌握 3 门大师级技艺(100点)', check: (s) => s.cities >= 8 && s.masterSkills >= 3, reward: '传家宝【聚宝盆】(每日自动产钱)' },
+  { gen: 99, title: '万世基业', desc: '家族延续 10 代', check: (s) => false, reward: '无' } 
+];
+
+const RANKS = [
+  { id: 0, title: '行脚商', desc: '初入商途，只能靠双脚丈量大地。', perk: '无', req: { cash: 0, cities: 1 } },
+  { id: 1, title: '市井掌柜', desc: '在坊间小有名气，懂得精打细算。', perk: '跨城运费降低 20%', req: { cash: 5000, cities: 2, bondLv: 1 } },
+  { id: 2, title: '州府商首', desc: '一方富豪，甚至能左右物价。', perk: '解锁【垄断】功能（可抬价销售）', req: { cash: 20000, cities: 3, bondLv: 3 } },
+  { id: 3, title: '朝廷皇商', desc: '红顶商人，专供宫廷御用。', perk: '解锁【贡品贸易】（极高利润）', req: { cash: 100000, cities: 4, bondLv: 6 } },
+  { id: 4, title: '江南巨贾', desc: '富可敌国，传说中的财神爷。', perk: '所有收益 +50%，通关游戏', req: { cash: 500000, cities: 4, bondLv: 10 } },
 ];
 
 const PROPERTIES = [
-  { id: 'hut', name: '城郊茅屋', cost: 2000, income: 10, desc: '遮风避雨，聊胜于无' },
-  { id: 'shop', name: '闹市铺面', cost: 10000, income: 80, desc: '客似云来，日进斗金' },
-  { id: 'garden', name: '沧浪亭台', cost: 50000, income: 500, desc: '虽由人作，宛自天开' },
+  { id: 'hut', name: '城郊别院', cost: 3000, income: 20, desc: '不仅能住，还能邀请红颜小住，加速感情升温。' },
+  { id: 'shop', name: '闹市铺面', cost: 15000, income: 100, desc: '客似云来，若在此售卖自制商品，利润更高。' },
 ];
 
-const BEAUTIES = [
-  { 
-    id: 'yun', 
-    name: '芸娘', 
-    title: '青梅竹马',
-    desc: '沈复之妻，情深义重，善解人意。', 
-    meetCost: 500, 
-    dateCost: 50, 
-    maxIntimacy: 100, 
-    buffDesc: '贤内助：每次休整额外恢复 10 点健康，且减少旅途健康消耗。', 
-    buffType: 'health_support'
-  },
-  { 
-    id: 'su', 
-    name: '苏小小', 
-    title: '钱塘名妓',
-    desc: '西湖边的一抹倩影，才情绝艳。', 
-    meetCost: 5000, 
-    dateCost: 300, 
-    maxIntimacy: 150, 
-    buffDesc: '旺夫运：所有房产收益增加 20%。', 
-    buffType: 'income_boost',
-    buffValue: 0.2
-  },
-  { 
-    id: 'dong', 
-    name: '董小宛', 
-    title: '秦淮八艳',
-    desc: '精通算学理财，甚至能帮你打理生意。', 
-    meetCost: 10000, 
-    dateCost: 800, 
-    maxIntimacy: 200, 
-    buffDesc: '精打细算：行囊容量增加 50 格。', 
-    buffType: 'inventory_boost',
-    buffValue: 50
-  },
+const INDUSTRIES = [
+  { id: 'mulberry_farm', name: '太湖桑园', cost: 5000, product: 'cocoon', rate: 5, desc: '每5天产出桑蚕茧，春季产量翻倍。' },
+  { id: 'tea_mountain', name: '龙井茶山', cost: 8000, product: 'raw_tea', rate: 5, desc: '每5天产出生茶，清明谷雨产量大增。' },
+  { id: 'mine', name: '徐州铁矿', cost: 12000, product: 'ore', rate: 7, desc: '每7天产出铁矿，产量稳定。' },
 ];
 
-const MAX_DAYS = 365; // 游戏时长一年
+const RECIPES = [
+  { id: 'weaving', name: '缫丝织造', product: 'silk', mat: 'cocoon', desc: '化茧成蝶，织就云锦。' },
+  { id: 'tea_art', name: '炒茶技艺', product: 'tea', mat: 'raw_tea', desc: '揉捻烘焙，茶香四溢。' },
+  { id: 'smithing', name: '冶炼锻造', product: 'tool', mat: 'ore', desc: '千锤百炼，铁树银花。' },
+  { id: 'ceramics', name: '制瓷术', product: 'vase', mat: 'clay', desc: '烧制青花瓷，巧夺天工。' },
+  { id: 'alchemy', name: '炼丹术', product: 'pill', mat: 'herb', desc: '炼制回春丹，救死扶伤。' },
+];
+
+const GOODS_POOL = [
+  // 原材料 (可生产)
+  { id: 'rice', name: '太湖梗米', basePrice: 10, volatility: 0.1, type: 'raw', desc: '民以食为天' },
+  { id: 'cocoon', name: '桑蚕茧', basePrice: 20, volatility: 0.2, type: 'raw', desc: '缫丝原料', producedBy: 'mulberry_farm' },
+  { id: 'raw_tea', name: '雨前生茶', basePrice: 15, volatility: 0.3, type: 'raw', desc: '制茶原料', producedBy: 'tea_mountain' },
+  { id: 'ore', name: '粗铁矿', basePrice: 30, volatility: 0.1, type: 'raw', desc: '冶炼原料', producedBy: 'mine' },
+  { id: 'clay', name: '高岭瓷土', basePrice: 50, volatility: 0.2, type: 'raw', desc: '制瓷原料' },
+  { id: 'herb', name: '长白山参', basePrice: 400, volatility: 0.3, type: 'raw', desc: '炼丹原料' },
+  
+  // 贸易/加工成品
+  { id: 'silk', name: '苏绣丝绸', basePrice: 150, volatility: 0.5, type: 'crafted', recipe: { skill: 'weaving', mat: 'cocoon', cost: 10 } },
+  { id: 'tea', name: '西湖龙井', basePrice: 120, volatility: 0.4, type: 'crafted', recipe: { skill: 'tea_art', mat: 'raw_tea', cost: 5 } },
+  { id: 'tool', name: '精铁农具', basePrice: 100, volatility: 0.2, type: 'crafted', recipe: { skill: 'smithing', mat: 'ore', cost: 15 } },
+  { id: 'vase', name: '青花瓷', basePrice: 800, volatility: 0.3, type: 'crafted', recipe: { skill: 'ceramics', mat: 'clay', cost: 50 } },
+  { id: 'pill', name: '回春丹', basePrice: 1200, volatility: 0.1, type: 'crafted', recipe: { skill: 'alchemy', mat: 'herb', cost: 100 } },
+  
+  // 纯贸易品
+  { id: 'spice', name: '西域香料', basePrice: 200, volatility: 0.6, type: 'trade' },
+  { id: 'pearl', name: '南海珍珠', basePrice: 350, volatility: 0.6, type: 'trade' },
+  { id: 'wine', name: '绍兴黄酒', basePrice: 30, volatility: 0.3, type: 'trade' },
+];
+
+const CITY_POOL = [
+  { id: 'suzhou', name: '苏州', desc: '园林甲天下，丝绸最出名。', region: 'south' },
+  { id: 'hangzhou', name: '杭州', desc: '西湖美景，龙井茶香。', region: 'south' },
+  { id: 'beijing', name: '北京', desc: '天子脚下，皇城根儿。', region: 'north' },
+  { id: 'guangzhou', name: '广州', desc: '岭南重镇，海外奇珍。', region: 'south' },
+  { id: 'changan', name: '长安', desc: '丝路起点，胡商云集。', region: 'north' },
+  { id: 'chengdu', name: '成都', desc: '天府之国，锦绣繁华。', region: 'west' },
+  { id: 'dunhuang', name: '敦煌', desc: '大漠孤烟，飞天壁画。', region: 'west' },
+  { id: 'kaifeng', name: '开封', desc: '清明上河，夜市千灯。', region: 'north' },
+];
+
+const BEAUTY_POOL = [
+  { id: 'yun', name: '芸娘', title: '青梅竹马', desc: '情深义重，布衣菜饭。', buffDesc: '每次休整额外恢复10点健康', buffType: 'health_support', keywords: 'gentle wife' },
+  { id: 'su', name: '苏小小', title: '钱塘名妓', desc: '妾乘油壁车，郎骑青骢马。', buffDesc: '房产收益增加20%', buffType: 'income_boost', buffValue: 0.2, keywords: 'courtesan elegant' },
+  { id: 'dong', name: '董小宛', title: '秦淮八艳', desc: '针神曲圣，食谱传世。', buffDesc: '行囊容量增加50', buffType: 'inventory_boost', buffValue: 50, keywords: 'chef virtuous' },
+];
+
+// --- 2. 辅助函数 ---
+
+const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5);
+const getAvatarUrl = (beauty) => `https://image.pollinations.ai/prompt/${encodeURIComponent(`portrait of a beautiful ancient chinese girl named ${beauty.name}, ${beauty.keywords}, traditional hanfu, digital painting, soft lighting`)}?width=100&height=100&nologo=true`;
+
+const MAX_DAYS = 365;
 const BASE_INVENTORY_CAPACITY = 100;
 
 export default function App() {
-  // --- 状态管理 ---
+  // 家族/传承状态 (LocalStorage 持久化建议)
+  const [generation, setGeneration] = useState(1);
+  const [familyLog, setFamilyLog] = useState([]); 
+  const [legacy, setLegacy] = useState(null); 
+  const [activeTalent, setActiveTalent] = useState(null);
   
-  // 玩家状态
-  const [cash, setCash] = useState(1000); 
+  // 当前世状态
+  const [gameStarted, setGameStarted] = useState(false);
+  const [showInheritUI, setShowInheritUI] = useState(false); 
+  
+  const [cities, setCities] = useState([]);
+  const [beauties, setBeauties] = useState([]);
+  
+  const [cash, setCash] = useState(1000);
   const [health, setHealth] = useState(100);
   const [day, setDay] = useState(1);
-  const [location, setLocation] = useState('suzhou');
-  const [inventory, setInventory] = useState({}); 
-  const [inventoryCount, setInventoryCount] = useState(0);
+  const [location, setLocation] = useState('');
+  const [inventory, setInventory] = useState({});
+  const [rank, setRank] = useState(0); 
+  const [skills, setSkills] = useState({ weaving: 0, tea_art: 0, smithing: 0, ceramics: 0, alchemy: 0 });
   
-  // 经济状态
-  const [marketPrices, setMarketPrices] = useState({}); 
+  const [marketPrices, setMarketPrices] = useState({});
   const [stockMarket, setStockMarket] = useState([]); 
-  const [myProperties, setMyProperties] = useState([]); 
+  const [myProperties, setMyProperties] = useState([]); // 房产
+  const [myIndustries, setMyIndustries] = useState([]); // 产业 { id, count, progress }
   
-  // 社交状态
-  const [relationships, setRelationships] = useState({}); // { beautyId: { unlocked: bool, intimacy: int, married: bool } }
+  const [relationships, setRelationships] = useState({});
+  const [unlockedAchievements, setUnlockedAchievements] = useState([]);
 
-  // UI 状态
-  const [activeTab, setActiveTab] = useState('market'); 
-  const [logs, setLogs] = useState(['浮生若梦，为欢几何。你带着1000两纹银，开始了在江南的行商之旅。']);
-  const [showGameOver, setShowGameOver] = useState(false);
-
-  // 引用
+  // UI
+  const [activeTab, setActiveTab] = useState('market');
+  const [logs, setLogs] = useState([]);
+  const [modal, setModal] = useState(null);
+  const [showBag, setShowBag] = useState(false);
   const logsEndRef = useRef(null);
 
   // --- 初始化与生命周期 ---
-
   useEffect(() => {
-    initGame();
-  }, []);
+    if (!gameStarted && !showInheritUI) {
+      if (generation === 1) {
+        initGame(); 
+      } else {
+        setShowInheritUI(true); 
+      }
+    }
+  }, [generation]);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  const initGame = () => {
-    const initialPrices = {};
-    CITIES.forEach(city => {
-      initialPrices[city.id] = generatePricesForCity(city.id);
-    });
-    setMarketPrices(initialPrices);
-
-    const initialStocks = STOCKS.map(s => ({
-      ...s,
-      currentPrice: s.basePrice,
-      owned: 0,
-      avgCost: 0
-    }));
-    setStockMarket(initialStocks);
+  // 检查世代挑战
+  useEffect(() => {
+    if (!gameStarted) return;
+    const currentGoal = GENERATION_GOALS.find(g => g.gen === generation) || GENERATION_GOALS[GENERATION_GOALS.length - 1];
     
-    // 初始化红颜状态
+    const stateSnapshot = {
+      day, 
+      assets: calculateTotalAssets(), 
+      props: myProperties.length + myIndustries.length,
+      lovers: Object.values(relationships).filter(r => r.unlocked).length,
+      rank, 
+      cities: 4, 
+      masterSkills: Object.values(skills).filter(v => v >= 100).length
+    };
+    
+    if (currentGoal.check(stateSnapshot) && !unlockedAchievements.includes(`gen_${generation}`)) {
+      setUnlockedAchievements(prev => [...prev, `gen_${generation}`]);
+      showModal('good', '达成人生目标', `恭喜完成【${currentGoal.title}】！\n获得传家宝：${currentGoal.reward}`);
+      addLog(`【里程碑】完成了本世夙愿：${currentGoal.title}`);
+    }
+  }, [day, cash, myProperties, myIndustries, relationships, rank, skills]);
+
+  const initGame = (selectedTalent = null) => {
+    // 1. 世界生成
+    const selectedCities = shuffleArray(CITY_POOL).slice(0, 5); 
+    setCities(selectedCities);
+    setLocation(selectedCities[0].id);
+
+    const selectedBeauties = shuffleArray(BEAUTY_POOL).slice(0, 3);
+    setBeauties(selectedBeauties);
     const initRel = {};
-    BEAUTIES.forEach(b => {
-      initRel[b.id] = { unlocked: false, intimacy: 0, married: false };
-    });
+    selectedBeauties.forEach(b => initRel[b.id] = { lv: 1, exp: 0, following: false, unlocked: false });
     setRelationships(initRel);
-  };
 
-  // --- 辅助计算 ---
+    // 2. 资金继承与波动
+    let startCash = Math.floor(Math.random() * 1000) + 800; 
+    if (legacy) {
+      startCash += Math.floor(legacy.cash * 0.7); 
+      addLog(`继承了祖上 ${Math.floor(legacy.cash * 0.7)} 两遗产。`);
+    }
+    if (selectedTalent?.type === 'cash') startCash += selectedTalent.val;
+    setCash(startCash);
 
-  const getBuff = (type) => {
-    let val = 0;
-    BEAUTIES.forEach(b => {
-      const rel = relationships[b.id];
-      if (rel && rel.married && b.buffType === type) {
-        val += b.buffValue || 0;
-      }
-    });
-    return val;
-  };
-  
-  const hasBuff = (type) => {
-     return BEAUTIES.some(b => {
-       const rel = relationships[b.id];
-       return rel && rel.married && b.buffType === type;
-     });
-  };
+    // 3. 技艺继承
+    const initSkills = { weaving: 0, tea_art: 0, smithing: 0, ceramics: 0, alchemy: 0 };
+    if (legacy) {
+      Object.keys(legacy.skills).forEach(k => {
+        initSkills[k] = Math.floor(legacy.skills[k] * 0.5); 
+      });
+      addLog('继承了家族流传的技艺经验。');
+    }
+    setSkills(initSkills);
 
-  const getMaxInventory = () => {
-    return BASE_INVENTORY_CAPACITY + getBuff('inventory_boost');
+    // 4. 天赋应用
+    setActiveTalent(selectedTalent);
+    if (selectedTalent?.type === 'health') setHealth(150);
+    else setHealth(100);
+
+    // 5. 初始化其他
+    setDay(1);
+    setInventory({});
+    setMyProperties([]);
+    setMyIndustries([]);
+    setStockMarket([]); 
+    setRank(0);
+    setLogs([`第 ${generation} 世开启。你的身份是：${RANKS[0].title}。目标：${GENERATION_GOALS.find(g=>g.gen===generation)?.desc || '活下去'}`]);
+    
+    // 初始价格
+    refreshPrices(selectedCities, 0);
+    setGameStarted(true);
+    setShowInheritUI(false);
   };
 
   // --- 核心逻辑 ---
 
-  const addLog = (msg) => {
-    setLogs(prev => [...prev, `[第${day}日] ${msg}`]);
-  };
-
-  const generatePricesForCity = (cityId) => {
-    const prices = {};
-    GOODS.forEach(good => {
-      let fluctuation = (Math.random() - 0.5) * 2 * good.volatility;
-      
-      if (cityId === 'suzhou' && good.id === 'silk') fluctuation -= 0.3;
-      if (cityId === 'hangzhou' && good.id === 'tea') fluctuation -= 0.3;
-      if (cityId === 'nanjing' && good.id === 'porcelain') fluctuation -= 0.2; 
-      if (cityId === 'yangzhou' && good.id === 'salt') fluctuation -= 0.2;
-
-      let price = Math.round(good.basePrice * (1 + fluctuation));
-      if (price < 1) price = 1;
-      prices[good.id] = price;
-    });
-    return prices;
-  };
-
-  const advanceDay = (travelToCityId = null) => {
-    if (day >= MAX_DAYS || health <= 0) {
-      endGame();
-      return;
-    }
-
-    const newDay = day + 1;
-    setDay(newDay);
-
-    // 1. 刷新商品价格
+  const refreshPrices = (currentCities, dayCount) => {
+    const termIdx = Math.floor((dayCount % 365) / 15) % 24;
+    const term = SOLAR_TERMS[termIdx];
     const newPrices = {};
-    CITIES.forEach(c => {
-      newPrices[c.id] = generatePricesForCity(c.id);
+
+    currentCities.forEach(city => {
+      const cityPrices = {};
+      GOODS_POOL.forEach(good => {
+        if (good.type === 'raw' && good.producedBy) return; 
+        
+        let base = good.basePrice;
+        
+        if (term.name === '清明' && good.id === 'raw_tea') base *= 0.5; 
+        if (term.name === '寒露' && good.id === 'silk') base *= 1.3;
+        if (term.name === '大寒' && (good.id === 'wine' || good.id === 'rice')) base *= 1.5;
+
+        // 随机波动
+        let price = Math.round(base * (1 + (Math.random() - 0.5) * 2 * good.volatility));
+        // 皇商加成
+        if (rank >= 3 && Math.random() < 0.2) price = Math.round(price * 1.4);
+        
+        cityPrices[good.id] = Math.max(1, price);
+      });
+      newPrices[city.id] = cityPrices;
     });
     setMarketPrices(newPrices);
+  };
 
-    // 2. 刷新股市
-    const newStocks = stockMarket.map(stock => {
-      const change = (Math.random() - 0.48) * stock.risk * 0.5;
-      let newPrice = Math.round(stock.currentPrice * (1 + change));
-      if (newPrice < 10) newPrice = 10;
-      return { ...stock, currentPrice: newPrice };
-    });
-    setStockMarket(newStocks);
+  const advanceTime = (daysPass, targetCityId = null) => {
+    const newDay = day + daysPass;
+    const termIdx = Math.floor((newDay % 365) / 15) % 24;
+    const currentTerm = SOLAR_TERMS[termIdx];
+    let dailyLog = [];
 
-    // 3. 房产收益 (计算Buff)
-    let dailyIncome = 0;
-    const incomeMultiplier = 1 + getBuff('income_boost');
-    
-    myProperties.forEach(p => {
-      const propType = PROPERTIES.find(def => def.id === p.id);
-      if (propType) {
-        dailyIncome += propType.income * p.count;
+    // 1. 产业生产
+    const newIndustries = myIndustries.map(ind => {
+      const def = INDUSTRIES.find(i => i.id === ind.id);
+      let production = 0;
+      const progress = ind.progress + daysPass;
+      if (progress >= def.rate) {
+        production = Math.floor(progress / def.rate) * ind.count;
+        if (currentTerm.name === '清明' && ind.id === 'tea_mountain') production *= 2;
+        if (currentTerm.name === '春分' && ind.id === 'mulberry_farm') production *= 2;
+        
+        setInventory(prev => ({ ...prev, [def.product]: (prev[def.product] || 0) + production }));
+        dailyLog.push(`产业【${def.name}】产出 ${production} ${GOODS_POOL.find(g=>g.id===def.product)?.name}`);
+        return { ...ind, progress: progress % def.rate };
       }
+      return { ...ind, progress };
     });
-    dailyIncome = Math.floor(dailyIncome * incomeMultiplier);
-    
-    if (dailyIncome > 0) {
-      setCash(prev => prev + dailyIncome);
-    }
+    setMyIndustries(newIndustries);
 
-    // 4. 处理移动与健康
-    const hasHealthBuff = hasBuff('health_support');
-    
-    if (travelToCityId) {
-      setLocation(travelToCityId);
-      const cityName = CITIES.find(c => c.id === travelToCityId).name;
-      // 芸娘Buff: 减少旅途消耗
-      const damage = hasHealthBuff ? 2 : 5;
-      setHealth(prev => Math.max(0, prev - damage));
-      addLog(`跋山涉水抵${cityName}。健康 -${damage}，房产收益 +${dailyIncome}两。`);
+    // 2. 移动/休息
+    let healthChange = 0;
+    if (targetCityId) {
+      const baseCost = 80;
+      const discount = rank >= 1 ? 0.8 : 1;
+      const cost = Math.round(baseCost * daysPass * discount);
+      if (cash < cost) return showModal('bad', '没钱', '路费不够');
+      
+      setCash(c => c - cost);
+      setLocation(targetCityId);
+      healthChange = -5 * daysPass;
+      // 节气恶劣天气
+      if (['大暑', '冬至', '大寒'].includes(currentTerm.name)) healthChange *= 2;
+      
+      const cityName = cities.find(c=>c.id===targetCityId)?.name || '未知';
+      dailyLog.push(`前往${cityName}，耗时${daysPass}天，花费${cost}。`);
     } else {
-      // 芸娘Buff: 增加休息恢复
-      const heal = hasHealthBuff ? 15 : 5;
-      setHealth(prev => Math.min(100, prev + heal));
-      addLog(`在${CITIES.find(c => c.id === location).name}休整。健康 +${heal}，房产收益 +${dailyIncome}两。`);
+      let heal = 10;
+      if (Object.values(relationships).some(r => r.following && r.lv>=3)) heal = 20;
+      if (currentTerm.name === '立春') heal += 5;
+      healthChange = heal * daysPass;
+      dailyLog.push(`修整${daysPass}天。`);
     }
 
-    // 5. 随机事件
-    handleRandomEvents(newDay);
-  };
-
-  const handleRandomEvents = (currentDay) => {
-    const chance = Math.random();
-    if (chance < 0.05) {
-      const lost = Math.floor(cash * 0.2);
-      setCash(prev => prev - lost);
-      setHealth(prev => prev - 10);
-      addLog(`【厄运】遭遇水匪！损失了 ${lost} 两银子和健康。`);
-    } else if (chance > 0.95) {
-      const bonus = 500;
-      setCash(prev => prev + bonus);
-      addLog(`【吉运】捡到了前朝遗留的宝物，当铺换得 ${bonus} 两！`);
-    } else if (chance > 0.90 && chance <= 0.95) {
-      setStockMarket(prev => prev.map(s => ({...s, currentPrice: Math.round(s.currentPrice * 0.7)})));
-      addLog(`【商闻】朝廷严查盐务织造，票号全线暴跌！`);
-    }
-  };
-
-  // --- 交易逻辑 ---
-
-  const buyGood = (goodId) => {
-    const price = marketPrices[location][goodId];
-    if (cash < price) {
-      alert("银两不足！");
-      return;
-    }
-    if (inventoryCount >= getMaxInventory()) {
-      alert("行囊已满！");
-      return;
-    }
-
-    setCash(prev => prev - price);
-    setInventory(prev => ({
-      ...prev,
-      [goodId]: (prev[goodId] || 0) + 1
-    }));
-    setInventoryCount(prev => prev + 1);
-  };
-
-  const sellGood = (goodId) => {
-    if (!inventory[goodId] || inventory[goodId] <= 0) return;
-    
-    const price = marketPrices[location][goodId];
-    setCash(prev => prev + price);
-    setInventory(prev => ({
-      ...prev,
-      [goodId]: prev[goodId] - 1
-    }));
-    setInventoryCount(prev => prev - 1);
-  };
-
-  const buyStock = (stockId) => {
-    const stock = stockMarket.find(s => s.id === stockId);
-    if (cash < stock.currentPrice) return;
-
-    setCash(prev => prev - stock.currentPrice);
-    setStockMarket(prev => prev.map(s => {
-      if (s.id === stockId) {
-        const totalCost = (s.avgCost * s.owned) + stock.currentPrice;
-        const newOwned = s.owned + 1;
-        return { ...s, owned: newOwned, avgCost: totalCost / newOwned };
-      }
-      return s;
-    }));
-  };
-
-  const sellStock = (stockId) => {
-    const stock = stockMarket.find(s => s.id === stockId);
-    if (stock.owned <= 0) return;
-
-    setCash(prev => prev + stock.currentPrice);
-    setStockMarket(prev => prev.map(s => {
-      if (s.id === stockId) {
-        return { ...s, owned: s.owned - 1 }; 
-      }
-      return s;
-    }));
-  };
-
-  const buyProperty = (propId) => {
-    const prop = PROPERTIES.find(p => p.id === propId);
-    if (cash < prop.cost) {
-      alert("银两不足以置办此产业！");
-      return;
-    }
-    
-    setCash(prev => prev - prop.cost);
-    setMyProperties(prev => {
-      const existing = prev.find(p => p.id === propId);
-      if (existing) {
-        return prev.map(p => p.id === propId ? { ...p, count: p.count + 1 } : p);
-      } else {
-        return [...prev, { id: propId, count: 1 }];
-      }
+    // 3. 房产收益
+    let propIncome = 0;
+    const incomeBuff = Object.values(relationships).some(r => r.following && r.lv>=3) ? 1.5 : 1;
+    myProperties.forEach(p => {
+      propIncome += PROPERTIES.find(def => def.id === p.id).income * p.count * daysPass;
     });
-    addLog(`置办了 ${prop.name} 一处。`);
-  };
+    if (propIncome > 0) {
+      const finalIncome = Math.floor(propIncome * incomeBuff);
+      setCash(c => c + finalIncome);
+      dailyLog.push(`房产收益 +${finalIncome}`);
+    }
 
-  // --- 红颜逻辑 ---
-
-  const meetBeauty = (beautyId) => {
-    const beauty = BEAUTIES.find(b => b.id === beautyId);
-    if (cash < beauty.meetCost) return;
-
-    setCash(prev => prev - beauty.meetCost);
-    setRelationships(prev => ({
-      ...prev,
-      [beautyId]: { ...prev[beautyId], unlocked: true }
-    }));
-    addLog(`花费 ${beauty.meetCost} 两，终于得见 ${beauty.name} 芳容。`);
-  };
-
-  const dateBeauty = (beautyId) => {
-    const beauty = BEAUTIES.find(b => b.id === beautyId);
-    const rel = relationships[beautyId];
-    if (cash < beauty.dateCost) return;
-    if (rel.intimacy >= beauty.maxIntimacy) return;
-
-    setCash(prev => prev - beauty.dateCost);
-    // 随机增加好感度
-    const intimacyGain = Math.floor(Math.random() * 10) + 10;
+    // 4. 结算
+    setDay(newDay);
+    setHealth(h => Math.min(activeTalent?.type==='health'?150:100, Math.max(0, h + healthChange)));
+    refreshPrices(cities, newDay);
     
-    setRelationships(prev => ({
-      ...prev,
-      [beautyId]: { 
-        ...prev[beautyId], 
-        intimacy: Math.min(beauty.maxIntimacy, prev[beautyId].intimacy + intimacyGain) 
-      }
-    }));
+    if (Math.floor((day % 365) / 15) !== termIdx) {
+      showModal('info', `节气：${currentTerm.name}`, currentTerm.desc);
+    }
+
+    dailyLog.forEach(l => addLog(l));
+
+    if (health + healthChange <= 0 || newDay >= 365 * 3) { 
+      handleEndGeneration(health + healthChange <= 0 ? '病逝' : '寿终正寝');
+    }
+  };
+
+  // --- 制造逻辑 ---
+  const craftItem = (recipeId) => {
+    const recipe = RECIPES.find(r => r.id === recipeId);
+    const hasMat = (inventory[recipe.mat] || 0) > 0;
+    if (!hasMat) return showModal('bad', '缺原料', `需要${GOODS_POOL.find(g=>g.id===recipe.mat)?.name}`);
+    if (cash < recipe.cost) return showModal('bad', '缺钱', '加工费不足');
+
+    const successRate = 0.5 + (skills[recipeId] * 0.005) + (activeTalent?.type==='clever' ? 0.2 : 0);
+    setCash(c => c - recipe.cost);
+    setInventory(prev => ({...prev, [recipe.mat]: prev[recipe.mat] - 1}));
+
+    if (Math.random() < successRate) {
+      setInventory(prev => ({...prev, [recipe.product]: (prev[recipe.product]||0) + 1}));
+      setSkills(prev => ({...prev, [recipeId]: Math.min(100, prev[recipeId] + 5)}));
+      showModal('good', '成功', `制成${GOODS_POOL.find(g=>g.id===recipe.product)?.name}！`);
+    } else {
+      setSkills(prev => ({...prev, [recipeId]: Math.min(100, prev[recipeId] + 1)}));
+      showModal('bad', '失败', '手滑了，原料报废。');
+    }
+  };
+
+  // --- 世代结束/传承 ---
+  const handleEndGeneration = (reason) => {
+    const totalAssets = calculateTotalAssets();
+    const historyEntry = {
+      gen: generation,
+      rank: RANKS[rank].title,
+      assets: totalAssets,
+      reason: reason,
+      date: new Date().toLocaleDateString()
+    };
     
-    addLog(`与${beauty.name}花前月下，好感倍增 (+${intimacyGain})`);
-  };
-
-  const marryBeauty = (beautyId) => {
-    const beauty = BEAUTIES.find(b => b.id === beautyId);
-    setRelationships(prev => ({
-      ...prev,
-      [beautyId]: { ...prev[beautyId], married: true }
-    }));
-    addLog(`【大喜】洞房花烛夜，金榜题名时。你与${beauty.name}喜结连理！获得特效：${beauty.buffDesc}`);
-  };
-
-  const endGame = () => {
-    setShowGameOver(true);
+    setFamilyLog(prev => [historyEntry, ...prev]);
+    setLegacy({
+      cash: totalAssets,
+      skills: skills
+    });
+    setGameStarted(false); 
+    setGeneration(g => g + 1);
   };
 
   const calculateTotalAssets = () => {
     let total = cash;
-    if (marketPrices[location]) {
-        Object.keys(inventory).forEach(k => {
-            total += (inventory[k] || 0) * marketPrices[location][k];
-        });
-    }
-    stockMarket.forEach(s => {
-      total += s.owned * s.currentPrice;
+    Object.keys(inventory).forEach(k => {
+      const g = GOODS_POOL.find(x => x.id === k);
+      if(g) total += (inventory[k] || 0) * g.basePrice;
     });
-    myProperties.forEach(p => {
-      const prop = PROPERTIES.find(x => x.id === p.id);
-      total += p.count * prop.cost;
-    });
+    myProperties.forEach(p => total += p.count * PROPERTIES.find(def=>def.id===p.id).cost);
+    myIndustries.forEach(p => total += p.count * INDUSTRIES.find(def=>def.id===p.id).cost);
     return total;
   };
 
-  // --- 渲染组件 ---
+  // --- UI 组件 ---
+  const showModal = (type, title, desc) => setModal({ type, title, desc });
 
-  if (showGameOver) {
-    const marriedCount = Object.values(relationships).filter(r => r.married).length;
+  // 1. 传承选择界面
+  if (showInheritUI) {
     return (
-      <div className="min-h-screen bg-amber-50 flex items-center justify-center p-4 font-serif">
-        <div className="bg-white p-8 border-4 border-double border-stone-800 shadow-2xl max-w-lg w-full text-center">
-          <h1 className="text-4xl font-bold mb-6 text-stone-900">浮生梦醒</h1>
-          <p className="text-xl mb-4">历经 {day} 个日夜。</p>
-          <div className="text-left bg-stone-100 p-4 rounded mb-6">
-            <p>最终现银：<span className="font-bold text-amber-700">{cash}</span> 两</p>
-            <p>红颜知己：<span className="font-bold text-pink-700">{marriedCount}</span> 位</p>
-            <p>总计资产：<span className="font-bold text-amber-700">{calculateTotalAssets()}</span> 两</p>
+      <div className="min-h-screen bg-stone-900 text-amber-50 flex flex-col items-center justify-center p-6">
+        <h1 className="text-4xl font-bold mb-2 text-amber-500">第 {generation} 世 轮回</h1>
+        <p className="text-stone-400 mb-8">先祖积累：银两 {Math.floor(legacy ? legacy.cash * 0.7 : 0)} | 技艺传承</p>
+        
+        <h3 className="text-xl mb-4 flex items-center gap-2"><Star className="text-yellow-400"/> 请选择本世天赋</h3>
+        <div className="grid gap-4 w-full max-w-sm">
+          {TALENTS.sort(() => 0.5 - Math.random()).slice(0, 3).map(talent => (
+            <button 
+              key={talent.id}
+              onClick={() => initGame(talent)}
+              className="bg-stone-800 border border-stone-600 p-4 rounded-xl text-left hover:border-amber-500 hover:bg-stone-700 transition"
+            >
+              <div className="font-bold text-lg text-amber-200">{talent.name}</div>
+              <div className="text-sm text-stone-400">{talent.desc}</div>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-8 w-full max-w-sm">
+          <h3 className="text-sm font-bold text-stone-500 mb-2 uppercase">家族族谱</h3>
+          <div className="bg-stone-800 rounded-lg p-2 h-32 overflow-y-auto custom-scrollbar">
+            {familyLog.map((log, i) => (
+              <div key={i} className="text-xs flex justify-between border-b border-stone-700 py-2">
+                <span>{log.gen}世. {log.rank}</span>
+                <span className="text-amber-500">{log.assets}两</span>
+                <span className="text-stone-500">{log.reason}</span>
+              </div>
+            ))}
           </div>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-6 py-2 bg-stone-800 text-amber-50 rounded hover:bg-stone-700"
-          >
-            再入红尘
-          </button>
         </div>
       </div>
     );
   }
 
-  const currentCity = CITIES.find(c => c.id === location);
+  // 2. 主游戏界面 (确保数据就绪)
+  if (!gameStarted || cities.length === 0) return <div className="min-h-screen flex items-center justify-center bg-[#fffcf5] text-stone-600">加载资源中...</div>;
+
+  const currentCityData = cities.find(c => c.id === location) || cities[0] || {name: '未知', desc: ''};
+  const termIdx = Math.floor((day % 365) / 15) % 24;
+  const currentTerm = SOLAR_TERMS[termIdx];
 
   return (
-    <div className="min-h-screen bg-[#f7f3e8] text-stone-800 font-serif overflow-hidden flex flex-col max-w-md mx-auto shadow-2xl border-x border-stone-300 relative">
-      {/* Header */}
-      <header className="bg-stone-800 text-[#f7f3e8] p-3 shadow-md z-10">
-        <div className="flex justify-between items-center mb-2">
-          <h1 className="text-xl font-bold tracking-widest">牛牛浮生记</h1>
-          <span className="text-sm bg-stone-700 px-2 py-1 rounded">第 {day}/{MAX_DAYS} 日</span>
+    <div className="min-h-screen bg-[#fffcf5] text-stone-800 font-sans flex flex-col max-w-md mx-auto shadow-2xl relative">
+      {/* 顶部 */}
+      <div className="bg-orange-700 text-white p-4 pb-8 rounded-b-3xl shadow-lg z-10">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold">牛牛家族</h1>
+              <span className="text-xs bg-black/20 px-2 py-0.5 rounded border border-white/20">第{generation}代</span>
+            </div>
+            <div className="text-xs text-orange-200 mt-1 flex gap-2 items-center">
+              <span className="bg-white/10 px-1 rounded">{RANKS[rank].title}</span>
+              <span>{day}天</span>
+              <span>{currentTerm.name} ({SEASONS[Math.floor(termIdx/6)]})</span>
+            </div>
+          </div>
+          <button onClick={() => setShowBag(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><Backpack size={20}/></button>
         </div>
-        <div className="grid grid-cols-4 gap-2 text-sm text-center">
-          <div className="flex flex-col items-center">
-            <Coins size={16} className="text-yellow-500 mb-1"/>
-            <span>{cash} 两</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <div className={`flex items-center ${health < 30 ? 'text-red-400' : 'text-green-400'}`}>
-               <span>{health}</span>
-            </div>
-            <span className="text-xs text-stone-400">健康</span>
-          </div>
-           <div className="flex flex-col items-center">
-            <ShoppingBag size={16} className="text-blue-300 mb-1"/>
-            <span>{inventoryCount}/{getMaxInventory()}</span>
-          </div>
-          <div className="flex flex-col items-center">
-             <span className="font-bold text-amber-500">{currentCity.name}</span>
-             <span className="text-xs text-stone-400">当前位置</span>
-          </div>
+        <div className="flex justify-between px-2">
+          <div className="text-center"><div className="text-xs opacity-70">银两</div><div className="text-xl font-mono font-bold">{cash}</div></div>
+          <div className="text-center"><div className="text-xs opacity-70">健康</div><div className="text-xl font-bold">{health}</div></div>
+          <div className="text-center"><div className="text-xs opacity-70">总资产</div><div className="text-xl font-bold">{calculateTotalAssets()}</div></div>
         </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto p-4 custom-scrollbar relative">
-        
-        {/* Market View */}
-        {activeTab === 'market' && (
-          <div className="space-y-4">
-            <div className="bg-white p-3 rounded shadow border border-stone-200">
-              <h2 className="text-lg font-bold border-b border-stone-200 pb-2 mb-2 flex items-center justify-between">
-                <span className="flex items-center"><ShoppingBag className="mr-2" size={18}/> {currentCity.name} 集市</span>
-              </h2>
-              <div className="grid gap-3">
-                {GOODS.map(good => {
-                  const price = marketPrices[location] ? marketPrices[location][good.id] : 0;
-                  const owned = inventory[good.id] || 0;
-                  return (
-                    <div key={good.id} className="flex justify-between items-center bg-stone-50 p-2 rounded">
-                      <div>
-                        <div className="font-bold text-stone-700">{good.name}</div>
-                        <div className="text-xs text-stone-500">市价: <span className="text-amber-700 font-mono text-sm font-bold">{price}</span> 两/{good.unit}</div>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="text-xs text-center mr-2">
-                          <div className="text-stone-400">持有</div>
-                          <div className="font-bold">{owned}</div>
-                        </div>
-                        <button 
-                          onClick={() => sellGood(good.id)}
-                          disabled={owned === 0}
-                          className={`px-3 py-1 text-xs rounded border ${owned > 0 ? 'bg-amber-100 border-amber-300 text-amber-900' : 'bg-gray-100 text-gray-400 border-gray-200'}`}
-                        >
-                          卖
-                        </button>
-                        <button 
-                          onClick={() => buyGood(good.id)}
-                          className="px-3 py-1 text-xs bg-stone-800 text-white rounded hover:bg-stone-700"
-                        >
-                          买
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Beauties View */}
-        {activeTab === 'beauties' && (
-          <div className="space-y-4">
-             <div className="bg-white p-3 rounded shadow border border-stone-200">
-              <h2 className="text-lg font-bold border-b border-stone-200 pb-2 mb-2 flex items-center text-pink-700">
-                <Heart className="mr-2" size={18}/> 
-                红颜知己
-              </h2>
-              <p className="text-xs text-stone-500 mb-4">
-                愿得一人心，白首不相离。结识红颜，不仅能得佳人相伴，更能助你事业腾飞。
-              </p>
-              
-              <div className="space-y-4">
-                {BEAUTIES.map(beauty => {
-                  const rel = relationships[beauty.id];
-                  if (!rel) return null;
-
-                  return (
-                    <div key={beauty.id} className={`border rounded p-3 relative overflow-hidden ${rel.married ? 'bg-red-50 border-red-200' : 'bg-stone-50 border-stone-200'}`}>
-                      {rel.married && (
-                        <div className="absolute top-2 right-2 text-red-500 border border-red-500 text-xs px-2 py-0.5 rounded rotate-12 font-bold">
-                          已结发
-                        </div>
-                      )}
-                      
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <div className="flex items-baseline space-x-2">
-                             <h3 className="font-bold text-lg text-stone-800">{beauty.name}</h3>
-                             <span className="text-xs text-stone-500 bg-stone-200 px-1 rounded">{beauty.title}</span>
-                          </div>
-                          <p className="text-xs text-stone-600 mt-1">{beauty.desc}</p>
-                        </div>
-                      </div>
-
-                      <div className="bg-white/50 p-2 rounded text-xs text-stone-500 mb-3 border border-stone-100">
-                         <span className="font-bold text-pink-600">【贤内助】</span> {beauty.buffDesc}
-                      </div>
-
-                      {!rel.unlocked ? (
-                        <div className="flex justify-between items-center mt-3 pt-2 border-t border-stone-200">
-                           <div className="text-sm text-stone-500">
-                             虽未曾谋面，但心向往之。
-                           </div>
-                           <button 
-                             onClick={() => meetBeauty(beauty.id)}
-                             disabled={cash < beauty.meetCost}
-                             className="bg-stone-800 text-amber-50 px-4 py-1.5 rounded text-sm disabled:opacity-50"
-                           >
-                             备礼拜访 ({beauty.meetCost}两)
-                           </button>
-                        </div>
-                      ) : (
-                        <div>
-                          {/* Intimacy Bar */}
-                          <div className="flex items-center text-xs mb-2 space-x-2">
-                            <Heart size={12} className={rel.married ? "text-red-500 fill-current" : "text-pink-400"} />
-                            <div className="flex-1 bg-stone-200 h-2 rounded-full overflow-hidden">
-                              <div 
-                                className="bg-pink-500 h-full transition-all duration-500" 
-                                style={{ width: `${(rel.intimacy / beauty.maxIntimacy) * 100}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-stone-500">{rel.intimacy}/{beauty.maxIntimacy}</span>
-                          </div>
-
-                          <div className="flex space-x-2 mt-2">
-                             {!rel.married ? (
-                               <>
-                                <button 
-                                  onClick={() => dateBeauty(beauty.id)}
-                                  disabled={cash < beauty.dateCost || rel.intimacy >= beauty.maxIntimacy}
-                                  className="flex-1 bg-pink-100 text-pink-800 border border-pink-200 py-1.5 rounded text-sm hover:bg-pink-200 disabled:opacity-50 flex items-center justify-center"
-                                >
-                                  <Gift size={14} className="mr-1"/> 赠礼 ({beauty.dateCost}两)
-                                </button>
-                                {rel.intimacy >= beauty.maxIntimacy && (
-                                  <button 
-                                    onClick={() => marryBeauty(beauty.id)}
-                                    className="flex-1 bg-red-600 text-white py-1.5 rounded text-sm hover:bg-red-700 animate-pulse"
-                                  >
-                                    迎娶过门
-                                  </button>
-                                )}
-                               </>
-                             ) : (
-                               <>
-                                <div className="w-full text-center py-1.5 text-sm text-red-800 bg-red-50 rounded italic">
-                                  琴瑟和鸣，岁月静好。
-                               </div>
-                               </>
-                             )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Travel View */}
-        {activeTab === 'travel' && (
-          <div className="space-y-4">
-            <div className="bg-white p-3 rounded shadow border border-stone-200">
-              <h2 className="text-lg font-bold border-b border-stone-200 pb-2 mb-2 flex items-center">
-                <Map className="mr-2" size={18}/> 
-                行商路线
-              </h2>
-              <div className="grid gap-3">
-                {CITIES.map(city => (
-                  <div key={city.id} className={`p-3 rounded border-l-4 flex justify-between items-center ${location === city.id ? 'bg-amber-50 border-amber-600' : 'bg-stone-50 border-stone-300'}`}>
-                    <div>
-                      <h3 className="font-bold">{city.name}</h3>
-                      <p className="text-xs text-stone-500">{city.desc}</p>
-                    </div>
-                    {location !== city.id ? (
-                      <button 
-                        onClick={() => advanceDay(city.id)}
-                        className="px-4 py-2 bg-stone-800 text-white text-sm rounded hover:bg-stone-700 flex items-center"
-                      >
-                        <Navigation size={14} className="mr-1"/> 前往
-                      </button>
-                    ) : (
-                      <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded">当前所在</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-              
-              <div className="mt-6 p-4 bg-stone-100 rounded text-center">
-                <p className="text-sm text-stone-600 mb-2">不想奔波？</p>
-                <button 
-                  onClick={() => advanceDay(null)}
-                  className="w-full py-2 border-2 border-stone-300 text-stone-600 font-bold rounded hover:bg-stone-200"
-                >
-                  原地修整一日 (恢复健康)
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Stocks View */}
-        {activeTab === 'stocks' && (
-          <div className="space-y-4">
-             <div className="bg-white p-3 rounded shadow border border-stone-200">
-              <h2 className="text-lg font-bold border-b border-stone-200 pb-2 mb-2 flex items-center">
-                <TrendingUp className="mr-2" size={18}/> 
-                江南票号
-              </h2>
-              <p className="text-xs text-stone-500 mb-4 bg-yellow-50 p-2 border border-yellow-200 rounded">
-                <AlertCircle size={12} className="inline mr-1"/>
-                股市有风险，入市需谨慎。票号每日价格波动。
-              </p>
-              
-              <div className="grid gap-3">
-                {stockMarket.map(stock => {
-                  const gain = stock.currentPrice - stock.avgCost;
-                  const isGain = gain >= 0;
-                  return (
-                    <div key={stock.id} className="bg-stone-50 p-3 rounded border border-stone-200">
-                      <div className="flex justify-between items-baseline mb-2">
-                        <h3 className="font-bold text-stone-800">{stock.name}</h3>
-                        <span className="text-xl font-mono font-bold text-amber-700">{stock.currentPrice} <span className="text-xs text-stone-500">两/股</span></span>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 text-xs text-stone-500 mb-3 gap-y-1">
-                        <div>持有: <span className="font-bold text-stone-800">{stock.owned}</span></div>
-                        <div>均价: <span className="font-bold text-stone-800">{Math.round(stock.avgCost)}</span></div>
-                        <div className="col-span-2">
-                           浮动盈亏: <span className={`${stock.owned > 0 ? (isGain ? 'text-red-600' : 'text-green-600') : 'text-stone-400'}`}>
-                             {stock.owned > 0 ? (stock.currentPrice * stock.owned - stock.avgCost * stock.owned).toFixed(0) : 0} 两
-                           </span>
-                        </div>
-                      </div>
-
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => buyStock(stock.id)}
-                          className="flex-1 py-1 bg-stone-800 text-white text-xs rounded"
-                        >
-                          买入
-                        </button>
-                        <button 
-                          onClick={() => sellStock(stock.id)}
-                          disabled={stock.owned <= 0}
-                          className="flex-1 py-1 border border-stone-300 text-stone-700 text-xs rounded disabled:opacity-50"
-                        >
-                          卖出
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Real Estate View */}
-        {activeTab === 'properties' && (
-          <div className="space-y-4">
-             <div className="bg-white p-3 rounded shadow border border-stone-200">
-              <h2 className="text-lg font-bold border-b border-stone-200 pb-2 mb-2 flex items-center">
-                <Home className="mr-2" size={18}/> 
-                置业田产
-              </h2>
-              <p className="text-xs text-stone-500 mb-4">
-                安得广厦千万间。购置房产可每日获得租金，且资产保值。
-              </p>
-              
-              <div className="space-y-4">
-                {PROPERTIES.map(prop => {
-                  const myProp = myProperties.find(p => p.id === prop.id);
-                  const count = myProp ? myProp.count : 0;
-                  
-                  return (
-                    <div key={prop.id} className="border border-stone-200 rounded p-3 bg-stone-50 relative overflow-hidden">
-                      <div className="absolute right-0 top-0 p-2 opacity-10 pointer-events-none">
-                        <Home size={64} />
-                      </div>
-                      <div className="flex justify-between items-start mb-2 relative z-10">
-                        <div>
-                          <h3 className="font-bold text-lg">{prop.name}</h3>
-                          <p className="text-xs text-stone-500">{prop.desc}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-amber-700 font-bold">{prop.cost} 两</div>
-                          <div className="text-xs text-green-600">收益: {prop.income} 两/日</div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-between items-center mt-3 border-t border-stone-200 pt-2 relative z-10">
-                        <div className="text-sm">
-                          当前拥有: <span className="font-bold text-lg">{count}</span> 处
-                        </div>
-                        <button 
-                          onClick={() => buyProperty(prop.id)}
-                          className="bg-amber-700 text-white px-4 py-1 rounded text-sm hover:bg-amber-800 disabled:opacity-50 disabled:bg-stone-400"
-                          disabled={cash < prop.cost}
-                        >
-                          置办
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-      </main>
-
-      {/* Log Section */}
-      <div className="h-32 bg-stone-900 text-stone-300 text-xs p-3 overflow-y-auto font-mono border-t border-stone-600">
-        <div className="flex items-center text-stone-500 mb-1 sticky top-0 bg-stone-900 pb-1 border-b border-stone-800">
-          <History size={12} className="mr-1"/> 浮生记事
-        </div>
-        {logs.map((log, i) => (
-          <div key={i} className="mb-1 border-l-2 border-stone-700 pl-2 py-0.5">
-            {log}
-          </div>
-        ))}
-        <div ref={logsEndRef} />
       </div>
 
-      {/* Navigation Footer */}
-      <nav className="bg-stone-100 border-t border-stone-300 p-2 flex justify-between shadow-inner">
-        <button 
-          onClick={() => setActiveTab('market')}
-          className={`flex flex-col items-center p-2 rounded flex-1 ${activeTab === 'market' ? 'text-amber-800 bg-amber-100' : 'text-stone-500 hover:bg-stone-200'}`}
-        >
-          <ShoppingBag size={20} />
-          <span className="text-xs mt-1">集市</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('travel')}
-          className={`flex flex-col items-center p-2 rounded flex-1 ${activeTab === 'travel' ? 'text-amber-800 bg-amber-100' : 'text-stone-500 hover:bg-stone-200'}`}
-        >
-          <Map size={20} />
-          <span className="text-xs mt-1">行商</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('beauties')}
-          className={`flex flex-col items-center p-2 rounded flex-1 ${activeTab === 'beauties' ? 'text-pink-700 bg-pink-100' : 'text-stone-500 hover:bg-stone-200'}`}
-        >
-          <Heart size={20} />
-          <span className="text-xs mt-1">红颜</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('stocks')}
-          className={`flex flex-col items-center p-2 rounded flex-1 ${activeTab === 'stocks' ? 'text-amber-800 bg-amber-100' : 'text-stone-500 hover:bg-stone-200'}`}
-        >
-          <TrendingUp size={20} />
-          <span className="text-xs mt-1">票号</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('properties')}
-          className={`flex flex-col items-center p-2 rounded flex-1 ${activeTab === 'properties' ? 'text-amber-800 bg-amber-100' : 'text-stone-500 hover:bg-stone-200'}`}
-        >
-          <Home size={20} />
-          <span className="text-xs mt-1">置业</span>
-        </button>
+      {/* 内容 */}
+      <div className="flex-1 overflow-y-auto p-4 -mt-6 pt-6 pb-24 space-y-4">
+        
+        {/* 市场 */}
+        {activeTab === 'market' && (
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
+            <h2 className="font-bold mb-3 flex items-center text-stone-700"><ShoppingBag className="mr-2 text-orange-600" size={18}/> {currentCityData.name}集市</h2>
+            <div className="space-y-2">
+              {GOODS_POOL.filter(g => g.type !== 'raw' || !g.producedBy).map(good => { // 只有成品和非产业原料在集市
+                const price = marketPrices[location]?.[good.id];
+                return (
+                  <div key={good.id} className="flex justify-between items-center bg-stone-50 p-2 rounded">
+                    <div>
+                      <div className="font-bold text-sm">{good.name}</div>
+                      <div className="text-xs text-stone-500">市价: <span className="text-orange-600">{price||'-'}</span></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs w-6 text-center">{inventory[good.id]||0}</span>
+                      <button onClick={()=>{
+                        if(!price || !inventory[good.id]) return;
+                        setCash(c=>c+price); setInventory(i=>({...i,[good.id]:i[good.id]-1}));
+                      }} className="w-7 h-7 bg-stone-200 rounded font-bold text-stone-600">-</button>
+                      <button onClick={()=>{
+                        if(!price || cash<price) return showModal('bad','穷','钱不够');
+                        setCash(c=>c-price); setInventory(i=>({...i,[good.id]:(i[good.id]||0)+1}));
+                      }} className="w-7 h-7 bg-orange-600 rounded font-bold text-white">+</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 产业与制造 (核心新玩法) */}
+        {activeTab === 'industry' && (
+          <div className="space-y-4">
+            {/* 产业列表 */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
+              <h2 className="font-bold mb-3 flex items-center text-stone-700"><Sprout className="mr-2 text-green-600" size={18}/> 家族产业</h2>
+              {INDUSTRIES.map(ind => {
+                const owned = myIndustries.find(i => i.id === ind.id);
+                return (
+                  <div key={ind.id} className="flex justify-between items-center mb-3 pb-3 border-b border-stone-50 last:border-0 last:pb-0">
+                    <div>
+                      <div className="font-bold text-sm">{ind.name}</div>
+                      <div className="text-xs text-stone-500">{ind.desc}</div>
+                    </div>
+                    {owned ? (
+                      <div className="text-right">
+                        <div className="text-xs font-bold text-green-600">拥有 x{owned.count}</div>
+                        <div className="text-[10px] text-stone-400">进度 {owned.progress}/{ind.rate}</div>
+                      </div>
+                    ) : (
+                      <button onClick={()=>{
+                        if(cash<ind.cost) return showModal('bad','缺钱','买不起地契');
+                        setCash(c=>c-ind.cost);
+                        setMyIndustries(prev=>[...prev, {id:ind.id, count:1, progress:0}]);
+                      }} className="text-xs bg-stone-800 text-white px-3 py-1.5 rounded">购买 {ind.cost}</button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* 加工坊 */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
+              <h2 className="font-bold mb-3 flex items-center text-stone-700"><Factory className="mr-2 text-blue-600" size={18}/> 技艺工坊</h2>
+              <div className="flex gap-2 mb-3 overflow-x-auto text-[10px] pb-1">
+                {Object.entries(skills).map(([k,v]) => (
+                  <span key={k} className="bg-blue-50 text-blue-600 px-2 py-1 rounded whitespace-nowrap">{RECIPES.find(r=>r.id===k)?.name.slice(0,2) || k}:{v}</span>
+                ))}
+              </div>
+              {RECIPES.map(recipe => (
+                <div key={recipe.id} className="flex justify-between items-center bg-stone-50 p-2 rounded mb-2">
+                  <div className="text-xs">
+                    <span className="font-bold">{recipe.name}</span>
+                    <div className="text-stone-500 scale-90 origin-left">{GOODS_POOL.find(g=>g.id===recipe.mat)?.name} → {GOODS_POOL.find(g=>g.id===recipe.product)?.name}</div>
+                  </div>
+                  <button onClick={()=>craftItem(recipe.id)} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">制造 (费用{recipe.cost})</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 移动/世界 */}
+        {activeTab === 'travel' && (
+          <div className="space-y-3">
+            {cities.map(city => {
+              if (city.id === location) return null;
+              return (
+                <button key={city.id} onClick={()=>advanceTime(2, city.id)} className="w-full bg-white p-3 rounded-xl flex justify-between items-center shadow-sm">
+                  <div className="text-left">
+                    <div className="font-bold text-sm">{city.name}</div>
+                    <div className="text-xs text-stone-500">{city.desc}</div>
+                  </div>
+                  <div className="text-right text-xs font-bold text-orange-600">2天 / 160两</div>
+                </button>
+              )
+            })}
+            <button onClick={()=>advanceTime(1)} className="w-full bg-stone-100 p-3 rounded-xl font-bold text-stone-600 flex justify-center gap-2"><Home size={18}/> 原地修整</button>
+          </div>
+        )}
+
+        {/* 知己 (修复: 补回丢失的渲染模块) */}
+        {activeTab === 'beauties' && (
+          <div className="space-y-4">
+            {beauties.map(beauty => {
+              const rel = relationships[beauty.id];
+              if (!rel) return null;
+
+              return (
+                <div key={beauty.id} className="bg-white p-4 rounded-xl shadow-sm border border-stone-100 overflow-hidden relative">
+                  <div className="flex gap-4">
+                    <img 
+                      src={getAvatarUrl(beauty)} 
+                      alt={beauty.name} 
+                      className="w-20 h-20 rounded-lg object-cover bg-stone-200 border-2 border-pink-50" 
+                    />
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-bold text-lg text-stone-800">{beauty.name}</h3>
+                        <div className="text-xs text-pink-500 font-bold border border-pink-200 px-1 rounded">Lv.{rel.lv}</div>
+                      </div>
+                      <p className="text-xs text-stone-500 mt-1 line-clamp-1">{beauty.desc}</p>
+                      
+                      {/* 羁绊进度条 */}
+                      <div className="w-full bg-stone-100 h-1.5 rounded-full mt-3 mb-1">
+                        <div className="bg-pink-400 h-1.5 rounded-full transition-all" style={{width: `${Math.min(100, (rel.exp / (rel.lv*50))*100)}%`}}></div>
+                      </div>
+                      <div className="flex justify-between text-[10px] text-stone-400 mb-2">
+                        <span>羁绊 {rel.exp}/{rel.lv*50}</span>
+                        <span>特权: Lv3解锁跟随</span>
+                      </div>
+                      
+                      <div className="flex gap-2 mt-2">
+                        {!rel.unlocked ? (
+                          <button onClick={()=>interactNPC(beauty.id, 'visit')} className="flex-1 bg-stone-800 text-white text-xs py-1.5 rounded shadow active:scale-95 transition">初次拜访 (100两)</button>
+                        ) : (
+                          <>
+                            <button onClick={()=>interactNPC(beauty.id, 'visit')} className="flex-1 border border-stone-300 text-stone-600 text-xs py-1.5 rounded hover:bg-stone-50 active:scale-95 transition">拜访</button>
+                            <button onClick={()=>interactNPC(beauty.id, 'quest')} className="flex-1 border border-pink-200 text-pink-600 text-xs py-1.5 rounded hover:bg-pink-50 active:scale-95 transition">赠礼</button>
+                            {rel.lv >= 3 && (
+                              <button 
+                                onClick={()=>interactNPC(beauty.id, 'follow')} 
+                                className={`flex-1 text-xs py-1.5 rounded font-bold shadow-sm active:scale-95 transition ${rel.following ? 'bg-pink-500 text-white' : 'bg-white border border-pink-500 text-pink-500'}`}
+                              >
+                                {rel.following ? '跟随中' : '邀请'}
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {rel.following && (
+                    <div className="mt-3 text-[10px] flex items-center justify-center gap-1 bg-pink-50 text-pink-600 py-1.5 rounded border border-pink-100">
+                      <Heart size={10} className="fill-current"/> 
+                      <span>羁绊生效：{beauty.perks?.follow || beauty.buffDesc}</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 资产/身份 */}
+        {activeTab === 'assets' && (
+          <div className="space-y-4">
+            <div className="bg-gradient-to-br from-stone-800 to-stone-900 text-amber-50 p-4 rounded-xl shadow-lg">
+              <h2 className="text-xl font-bold text-amber-200 mb-1">{RANKS[rank].title}</h2>
+              <div className="text-xs text-stone-400 mb-3">{RANKS[rank].desc}</div>
+              <div className="bg-white/10 p-2 rounded text-xs mb-3">特权: {RANKS[rank].perk}</div>
+              {rank < 4 && (
+                <button onClick={()=>{
+                  const next = RANKS[rank+1];
+                  if(cash>=next.req.cash && myProperties.length+myIndustries.length >= next.req.cities) { // 简化条件
+                    setRank(r=>r+1); showModal('good','晋升',`成为${next.title}!`);
+                  } else {
+                    showModal('bad','未达标',`需银两${next.req.cash}，资产${next.req.cities}`);
+                  }
+                }} className="w-full bg-amber-600 py-2 rounded text-sm font-bold">晋升</button>
+              )}
+            </div>
+            
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
+              <h3 className="font-bold text-sm mb-2">房产</h3>
+              {PROPERTIES.map(p => {
+                const owned = myProperties.find(mp => mp.id === p.id);
+                return (
+                  <div key={p.id} className="flex justify-between items-center mb-2 text-sm border-b border-stone-50 pb-2">
+                    <span>{p.name}</span>
+                    {owned ? <span className="text-green-600 font-bold">已购</span> : 
+                      <button onClick={()=>{
+                        if(cash<p.cost) return showModal('bad','穷','');
+                        setCash(c=>c-p.cost); setMyProperties(prev=>[...prev,{id:p.id, count:1}]);
+                      }} className="bg-stone-800 text-white px-2 py-1 rounded text-xs">买 {p.cost}</button>
+                    }
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* 底部导航 */}
+      <nav className="bg-white border-t border-stone-200 px-2 py-2 flex justify-between items-center text-[10px]">
+        {[
+          {id:'market', icon:ShoppingBag, l:'集市'},
+          {id:'industry', icon:Sprout, l:'产业'}, // 新入口
+          {id:'travel', icon:Map, l:'世界'},
+          {id:'beauties', icon:Heart, l:'知己'},
+          {id:'assets', icon:Crown, l:'家族'}
+        ].map(t => (
+          <button key={t.id} onClick={()=>setActiveTab(t.id)} className={`flex flex-col items-center p-2 w-1/5 ${activeTab===t.id?'text-orange-600 font-bold':'text-stone-400'}`}>
+            <t.icon size={20} className="mb-1"/>{t.l}
+          </button>
+        ))}
       </nav>
+
+      {/* 弹窗们 */}
+      {modal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={()=>setModal(null)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm text-center" onClick={e=>e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-2">{modal.title}</h3>
+            <p className="text-sm text-stone-600 mb-4 whitespace-pre-wrap">{modal.desc}</p>
+            <button onClick={()=>setModal(null)} className="w-full py-2 bg-stone-800 text-white rounded-lg">好的</button>
+          </div>
+        </div>
+      )}
       
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f7f3e8;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #d6d3d1;
-          border-radius: 3px;
-        }
-      `}</style>
+      {showBag && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/30" onClick={()=>setShowBag(false)}>
+          <div className="bg-white w-3/4 max-h-[60vh] overflow-y-auto rounded-xl p-4" onClick={e=>e.stopPropagation()}>
+            <h3 className="font-bold border-b pb-2 mb-2">行囊</h3>
+            {Object.entries(inventory).map(([k,v]) => v>0 && (
+              <div key={k} className="flex justify-between text-sm py-1">
+                <span>{GOODS_POOL.find(g=>g.id===k)?.name || '未知物品'}</span>
+                <span className="font-mono">x{v}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
