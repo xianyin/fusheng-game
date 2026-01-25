@@ -5,10 +5,11 @@ import {
   Map, Coins, TrendingUp, Home, ShoppingBag, Navigation, History, 
   AlertCircle, Heart, Gift, X, Trophy, CloudLightning, Sun, Umbrella, 
   Zap, Info, RefreshCw, Backpack, Crown, Hammer, Snowflake, Flower, 
-  Leaf, UserPlus, Star, Scroll, Anchor, Sprout, Factory, Baby
+  Leaf, UserPlus, Star, Scroll, Anchor, Sprout, Factory, Baby, 
+  Save, Download, Upload, Trash2, Moon, BookOpen
 } from 'lucide-react';
 
-// --- 1. 核心常量定义 (整合版) ---
+// --- 1. 核心常量定义 ---
 
 const SEASONS = ['春', '夏', '秋', '冬'];
 const SOLAR_TERMS = [
@@ -27,7 +28,7 @@ const SOLAR_TERMS = [
 ];
 
 const TALENTS = [
-  { id: 't_rich', name: '商贾世家', desc: '初始资金 +2000，且开局自带一本生意经（经验+）', type: 'cash', val: 2000 },
+  { id: 't_rich', name: '商贾世家', desc: '初始资金 +2000，且开局自带一本生意经', type: 'cash', val: 2000 },
   { id: 't_strong', name: '武林世家', desc: '初始健康上限 150，且遭遇劫匪胜率翻倍', type: 'health', val: 50 },
   { id: 't_charm', name: '潘安再世', desc: '所有红颜初始好感度 +20，且约会消耗减半', type: 'charm', val: 20 },
   { id: 't_clever', name: '鬼谷传人', desc: '技艺熟练度获取速度 +50%，制作成功率 +20%', type: 'skill', val: 0.5 },
@@ -43,11 +44,11 @@ const GENERATION_GOALS = [
 ];
 
 const RANKS = [
-  { id: 0, title: '行脚商', desc: '初入商途，只能靠双脚丈量大地。', perk: '无', req: { cash: 0, cities: 1 } },
-  { id: 1, title: '市井掌柜', desc: '在坊间小有名气，懂得精打细算。', perk: '跨城运费降低 20%', req: { cash: 5000, cities: 2, bondLv: 1 } },
-  { id: 2, title: '州府商首', desc: '一方富豪，甚至能左右物价。', perk: '解锁【垄断】功能（可抬价销售）', req: { cash: 20000, cities: 3, bondLv: 3 } },
-  { id: 3, title: '朝廷皇商', desc: '红顶商人，专供宫廷御用。', perk: '解锁【贡品贸易】（极高利润）', req: { cash: 100000, cities: 4, bondLv: 6 } },
-  { id: 4, title: '江南巨贾', desc: '富可敌国，传说中的财神爷。', perk: '所有收益 +50%，通关游戏', req: { cash: 500000, cities: 4, bondLv: 10 } },
+  { id: 0, title: '行脚商', desc: '初入商途，只能靠双脚丈量大地。', perk: '无', req: { cash: 0, cities: 1 }, idleIncome: 0 },
+  { id: 1, title: '市井掌柜', desc: '在坊间小有名气，懂得精打细算。', perk: '跨城运费降低 20%', req: { cash: 5000, cities: 2, bondLv: 1 }, idleIncome: 10 },
+  { id: 2, title: '州府商首', desc: '一方富豪，甚至能左右物价。', perk: '解锁【垄断】功能（可抬价销售）', req: { cash: 20000, cities: 3, bondLv: 3 }, idleIncome: 50 },
+  { id: 3, title: '朝廷皇商', desc: '红顶商人，专供宫廷御用。', perk: '解锁【贡品贸易】（极高利润）', req: { cash: 100000, cities: 4, bondLv: 6 }, idleIncome: 200 },
+  { id: 4, title: '江南巨贾', desc: '富可敌国，传说中的财神爷。', perk: '所有收益 +50%，通关游戏', req: { cash: 500000, cities: 4, bondLv: 10 }, idleIncome: 1000 },
 ];
 
 const PROPERTIES = [
@@ -70,22 +71,17 @@ const RECIPES = [
 ];
 
 const GOODS_POOL = [
-  // 原材料 (可生产)
   { id: 'rice', name: '太湖梗米', basePrice: 10, volatility: 0.1, type: 'raw', desc: '民以食为天' },
   { id: 'cocoon', name: '桑蚕茧', basePrice: 20, volatility: 0.2, type: 'raw', desc: '缫丝原料', producedBy: 'mulberry_farm' },
   { id: 'raw_tea', name: '雨前生茶', basePrice: 15, volatility: 0.3, type: 'raw', desc: '制茶原料', producedBy: 'tea_mountain' },
   { id: 'ore', name: '粗铁矿', basePrice: 30, volatility: 0.1, type: 'raw', desc: '冶炼原料', producedBy: 'mine' },
   { id: 'clay', name: '高岭瓷土', basePrice: 50, volatility: 0.2, type: 'raw', desc: '制瓷原料' },
   { id: 'herb', name: '长白山参', basePrice: 400, volatility: 0.3, type: 'raw', desc: '炼丹原料' },
-  
-  // 贸易/加工成品
   { id: 'silk', name: '苏绣丝绸', basePrice: 150, volatility: 0.5, type: 'crafted', recipe: { skill: 'weaving', mat: 'cocoon', cost: 10 } },
   { id: 'tea', name: '西湖龙井', basePrice: 120, volatility: 0.4, type: 'crafted', recipe: { skill: 'tea_art', mat: 'raw_tea', cost: 5 } },
   { id: 'tool', name: '精铁农具', basePrice: 100, volatility: 0.2, type: 'crafted', recipe: { skill: 'smithing', mat: 'ore', cost: 15 } },
   { id: 'vase', name: '青花瓷', basePrice: 800, volatility: 0.3, type: 'crafted', recipe: { skill: 'ceramics', mat: 'clay', cost: 50 } },
   { id: 'pill', name: '回春丹', basePrice: 1200, volatility: 0.1, type: 'crafted', recipe: { skill: 'alchemy', mat: 'herb', cost: 100 } },
-  
-  // 纯贸易品
   { id: 'spice', name: '西域香料', basePrice: 200, volatility: 0.6, type: 'trade' },
   { id: 'pearl', name: '南海珍珠', basePrice: 350, volatility: 0.6, type: 'trade' },
   { id: 'wine', name: '绍兴黄酒', basePrice: 30, volatility: 0.3, type: 'trade' },
@@ -115,17 +111,22 @@ const getAvatarUrl = (beauty) => `https://image.pollinations.ai/prompt/${encodeU
 
 const MAX_DAYS = 365;
 const BASE_INVENTORY_CAPACITY = 100;
+const SAVE_KEY = 'FUSHENG_GAME_SAVE_V1';
 
 export default function App() {
-  // 家族/传承状态 (LocalStorage 持久化建议)
+  // --- 状态管理 ---
+  
+  // 家族/传承/永续状态 (Layer 3 & 4)
   const [generation, setGeneration] = useState(1);
   const [familyLog, setFamilyLog] = useState([]); 
   const [legacy, setLegacy] = useState(null); 
+  const [collections, setCollections] = useState([]); // 家族藏馆 (古籍/风物)
   const [activeTalent, setActiveTalent] = useState(null);
   
-  // 当前世状态
+  // 当前世状态 (Layer 1 & 2)
   const [gameStarted, setGameStarted] = useState(false);
   const [showInheritUI, setShowInheritUI] = useState(false); 
+  const [isLoaded, setIsLoaded] = useState(false); // 存档加载标记
   
   const [cities, setCities] = useState([]);
   const [beauties, setBeauties] = useState([]);
@@ -140,8 +141,8 @@ export default function App() {
   
   const [marketPrices, setMarketPrices] = useState({});
   const [stockMarket, setStockMarket] = useState([]); 
-  const [myProperties, setMyProperties] = useState([]); // 房产
-  const [myIndustries, setMyIndustries] = useState([]); // 产业 { id, count, progress }
+  const [myProperties, setMyProperties] = useState([]); 
+  const [myIndustries, setMyIndustries] = useState([]); 
   
   const [relationships, setRelationships] = useState({});
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
@@ -151,35 +152,179 @@ export default function App() {
   const [logs, setLogs] = useState([]);
   const [modal, setModal] = useState(null);
   const [showBag, setShowBag] = useState(false);
+  const [showSystem, setShowSystem] = useState(false); // 系统/设置页
+  const [importText, setImportText] = useState("");
   const logsEndRef = useRef(null);
 
-  // --- 初始化与生命周期 ---
-  useEffect(() => {
-    if (!gameStarted && !showInheritUI) {
-      if (generation === 1) {
-        initGame(); 
-      } else {
-        setShowInheritUI(true); 
-      }
-    }
-  }, [generation]);
+  // --- 1. 存档/读档系统 ---
 
+  // 挂载时尝试读取存档
+  useEffect(() => {
+    const loadGame = () => {
+      try {
+        const savedData = localStorage.getItem(SAVE_KEY);
+        if (savedData) {
+          const data = JSON.parse(savedData);
+          // 恢复全局状态
+          setGeneration(data.global.generation || 1);
+          setFamilyLog(data.global.familyLog || []);
+          setLegacy(data.global.legacy || null);
+          setCollections(data.global.collections || []);
+          setUnlockedAchievements(data.global.unlockedAchievements || []);
+          
+          // 恢复当前状态
+          if (data.current) {
+            setCash(data.current.cash);
+            setHealth(data.current.health);
+            setDay(data.current.day);
+            setLocation(data.current.location);
+            setInventory(data.current.inventory || {});
+            setRank(data.current.rank || 0);
+            setSkills(data.current.skills || {});
+            setCities(data.current.cities || []);
+            setBeauties(data.current.beauties || []);
+            setRelationships(data.current.relationships || {});
+            setMyProperties(data.current.myProperties || []);
+            setMyIndustries(data.current.myIndustries || []);
+            setMarketPrices(data.current.marketPrices || {});
+            setStockMarket(data.current.stockMarket || []);
+            setActiveTalent(data.current.activeTalent || null);
+            setGameStarted(true);
+            setLogs(data.current.logs || []);
+
+            // 离线收益结算 (Offline Gains)
+            if (data.timestamp) {
+              const now = Date.now();
+              const diffHours = (now - data.timestamp) / (1000 * 60 * 60);
+              if (diffHours > 1) { // 离线超过1小时
+                const hours = Math.min(24, Math.floor(diffHours));
+                const rankIncome = RANKS[data.current.rank || 0].idleIncome || 0;
+                let propIncome = 0;
+                (data.current.myProperties || []).forEach(p => {
+                   propIncome += (PROPERTIES.find(def => def.id === p.id)?.income || 0) * p.count;
+                });
+                // 离线收益打折 50%
+                const totalOfflineGain = Math.floor((rankIncome + propIncome) * hours * 0.5);
+                if (totalOfflineGain > 0) {
+                  setCash(prev => prev + totalOfflineGain);
+                  setTimeout(() => showModal('good', '离线收益', `你离开期间，商号伙计帮你赚了 ${totalOfflineGain} 两银子。\n(离线 ${hours} 小时)`), 1000);
+                }
+              }
+            }
+          } else {
+            // 有全局存档但没有当前游戏 (刚传承完)
+            setShowInheritUI(true);
+          }
+        } else {
+          // 全新游戏
+          initGame();
+        }
+      } catch (e) {
+        console.error("存档读取失败", e);
+        initGame();
+      }
+      setIsLoaded(true);
+    };
+    loadGame();
+  }, []);
+
+  // 状态变化时自动保存 (节流保存建议在生产环境中做，这里简化为每次变动保存关键数据)
+  useEffect(() => {
+    if (!isLoaded || !gameStarted) return;
+    
+    const saveData = {
+      version: '1.0',
+      timestamp: Date.now(),
+      global: {
+        generation, familyLog, legacy, unlockedAchievements, collections
+      },
+      current: {
+        cash, health, day, location, inventory, rank, skills,
+        cities, beauties, relationships, myProperties, myIndustries,
+        marketPrices, stockMarket, activeTalent, logs: logs.slice(-20) // 只存最近日志
+      }
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+  }, [day, cash, inventory, rank, skills, generation, relationships, isLoaded, gameStarted]);
+
+  // 导出存档
+  const exportSave = () => {
+    const data = localStorage.getItem(SAVE_KEY);
+    if (!data) return showModal('bad', '无存档', '尚无游戏记录');
+    
+    try {
+      const encoded = btoa(unescape(encodeURIComponent(data))); // Base64 编码防乱码
+      
+      // Fallback for iframe/sandbox restrictions
+      const textArea = document.createElement("textarea");
+      textArea.value = encoded;
+      
+      // Ensure it's not visible but part of the DOM
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      document.body.appendChild(textArea);
+      
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showModal('good', '导出成功', '存档码已复制到剪贴板！\n请保存在安全的地方。');
+        } else {
+          throw new Error('Copy command failed');
+        }
+      } catch (err) {
+        console.error('Fallback: Oops, unable to copy', err);
+        showModal('bad', '复制失败', '请手动复制以下存档码：\n' + encoded.substring(0, 20) + '...');
+      }
+      
+      document.body.removeChild(textArea);
+      
+    } catch (e) {
+      console.error(e);
+      showModal('bad', '导出失败', '无法生成存档码');
+    }
+  };
+
+  // 导入存档
+  const importSave = () => {
+    if (!importText) return;
+    try {
+      const decoded = decodeURIComponent(escape(atob(importText)));
+      JSON.parse(decoded); // 校验 JSON 格式
+      localStorage.setItem(SAVE_KEY, decoded);
+      showModal('good', '导入成功', '即将刷新页面加载存档...');
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (e) {
+      showModal('bad', '导入失败', '存档码格式错误或已损坏');
+    }
+  };
+
+  // 重置游戏
+  const hardReset = () => {
+    if (confirm('确定要删除所有存档吗？包括家族族谱和收藏！此操作不可逆！')) {
+      localStorage.removeItem(SAVE_KEY);
+      window.location.reload();
+    }
+  };
+
+  // --- 滚动日志 ---
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // 检查世代挑战
+  // --- 世代挑战 ---
   useEffect(() => {
     if (!gameStarted) return;
     const currentGoal = GENERATION_GOALS.find(g => g.gen === generation) || GENERATION_GOALS[GENERATION_GOALS.length - 1];
     
     const stateSnapshot = {
-      day, 
-      assets: calculateTotalAssets(), 
+      day, assets: calculateTotalAssets(), 
       props: myProperties.length + myIndustries.length,
       lovers: Object.values(relationships).filter(r => r.unlocked).length,
-      rank, 
-      cities: 4, 
+      rank, cities: 4, 
       masterSkills: Object.values(skills).filter(v => v >= 100).length
     };
     
@@ -254,7 +399,7 @@ export default function App() {
         if (good.type === 'raw' && good.producedBy) return; 
         
         let base = good.basePrice;
-        
+        // 节气/季节影响
         if (term.name === '清明' && good.id === 'raw_tea') base *= 0.5; 
         if (term.name === '寒露' && good.id === 'silk') base *= 1.3;
         if (term.name === '大寒' && (good.id === 'wine' || good.id === 'rice')) base *= 1.5;
@@ -342,6 +487,7 @@ export default function App() {
 
     dailyLog.forEach(l => addLog(l));
 
+    // 死亡/退休判定
     if (health + healthChange <= 0 || newDay >= 365 * 3) { 
       handleEndGeneration(health + healthChange <= 0 ? '病逝' : '寿终正寝');
     }
@@ -380,10 +526,17 @@ export default function App() {
     };
     
     setFamilyLog(prev => [historyEntry, ...prev]);
-    setLegacy({
-      cash: totalAssets,
-      skills: skills
-    });
+    setLegacy({ cash: totalAssets, skills: skills });
+    
+    // 自动保存一下，防止刷新丢失
+    const saveData = {
+        version: '1.0',
+        timestamp: Date.now(),
+        global: { generation: generation + 1, familyLog: [historyEntry, ...familyLog], legacy: { cash: totalAssets, skills: skills }, unlockedAchievements, collections },
+        current: null // 清空当前局数据
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
+
     setGameStarted(false); 
     setGeneration(g => g + 1);
   };
@@ -399,13 +552,17 @@ export default function App() {
     return total;
   };
 
-  // --- UI 组件 ---
   const showModal = (type, title, desc) => setModal({ type, title, desc });
 
   // 1. 传承选择界面
   if (showInheritUI) {
     return (
-      <div className="min-h-screen bg-stone-900 text-amber-50 flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-stone-900 text-amber-50 flex flex-col items-center justify-center p-6 relative">
+        {/* 系统按钮 */}
+        <button onClick={()=>setShowSystem(true)} className="absolute top-4 right-4 p-2 bg-stone-800 rounded-full hover:bg-stone-700 border border-stone-600">
+            <Save size={20} />
+        </button>
+
         <h1 className="text-4xl font-bold mb-2 text-amber-500">第 {generation} 世 轮回</h1>
         <p className="text-stone-400 mb-8">先祖积累：银两 {Math.floor(legacy ? legacy.cash * 0.7 : 0)} | 技艺传承</p>
         
@@ -435,12 +592,15 @@ export default function App() {
             ))}
           </div>
         </div>
+
+        {/* 系统弹窗 (复用) */}
+        {showSystem && <SystemModal onClose={()=>setShowSystem(false)} onExport={exportSave} onImport={importSave} onReset={hardReset} importText={importText} setImportText={setImportText} />}
       </div>
     );
   }
 
-  // 2. 主游戏界面 (确保数据就绪)
-  if (!gameStarted || cities.length === 0) return <div className="min-h-screen flex items-center justify-center bg-[#fffcf5] text-stone-600">加载资源中...</div>;
+  // 2. 主游戏界面
+  if (!isLoaded || (!gameStarted && generation === 1)) return <div className="min-h-screen flex items-center justify-center bg-[#fffcf5] text-stone-600">载入历史长河...</div>;
 
   const currentCityData = cities.find(c => c.id === location) || cities[0] || {name: '未知', desc: ''};
   const termIdx = Math.floor((day % 365) / 15) % 24;
@@ -462,7 +622,10 @@ export default function App() {
               <span>{currentTerm.name} ({SEASONS[Math.floor(termIdx/6)]})</span>
             </div>
           </div>
-          <button onClick={() => setShowBag(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><Backpack size={20}/></button>
+          <div className="flex gap-2">
+             <button onClick={() => setShowSystem(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><Save size={20}/></button>
+             <button onClick={() => setShowBag(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><Backpack size={20}/></button>
+          </div>
         </div>
         <div className="flex justify-between px-2">
           <div className="text-center"><div className="text-xs opacity-70">银两</div><div className="text-xl font-mono font-bold">{cash}</div></div>
@@ -479,7 +642,7 @@ export default function App() {
           <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
             <h2 className="font-bold mb-3 flex items-center text-stone-700"><ShoppingBag className="mr-2 text-orange-600" size={18}/> {currentCityData.name}集市</h2>
             <div className="space-y-2">
-              {GOODS_POOL.filter(g => g.type !== 'raw' || !g.producedBy).map(good => { // 只有成品和非产业原料在集市
+              {GOODS_POOL.filter(g => g.type !== 'raw' || !g.producedBy).map(good => { 
                 const price = marketPrices[location]?.[good.id];
                 return (
                   <div key={good.id} className="flex justify-between items-center bg-stone-50 p-2 rounded">
@@ -505,10 +668,9 @@ export default function App() {
           </div>
         )}
 
-        {/* 产业与制造 (核心新玩法) */}
+        {/* 产业 */}
         {activeTab === 'industry' && (
           <div className="space-y-4">
-            {/* 产业列表 */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
               <h2 className="font-bold mb-3 flex items-center text-stone-700"><Sprout className="mr-2 text-green-600" size={18}/> 家族产业</h2>
               {INDUSTRIES.map(ind => {
@@ -536,7 +698,6 @@ export default function App() {
               })}
             </div>
 
-            {/* 加工坊 */}
             <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
               <h2 className="font-bold mb-3 flex items-center text-stone-700"><Factory className="mr-2 text-blue-600" size={18}/> 技艺工坊</h2>
               <div className="flex gap-2 mb-3 overflow-x-auto text-[10px] pb-1">
@@ -576,7 +737,7 @@ export default function App() {
           </div>
         )}
 
-        {/* 知己 (修复: 补回丢失的渲染模块) */}
+        {/* 知己 */}
         {activeTab === 'beauties' && (
           <div className="space-y-4">
             {beauties.map(beauty => {
@@ -613,7 +774,6 @@ export default function App() {
                         ) : (
                           <>
                             <button onClick={()=>interactNPC(beauty.id, 'visit')} className="flex-1 border border-stone-300 text-stone-600 text-xs py-1.5 rounded hover:bg-stone-50 active:scale-95 transition">拜访</button>
-                            <button onClick={()=>interactNPC(beauty.id, 'quest')} className="flex-1 border border-pink-200 text-pink-600 text-xs py-1.5 rounded hover:bg-pink-50 active:scale-95 transition">赠礼</button>
                             {rel.lv >= 3 && (
                               <button 
                                 onClick={()=>interactNPC(beauty.id, 'follow')} 
@@ -630,7 +790,7 @@ export default function App() {
                   {rel.following && (
                     <div className="mt-3 text-[10px] flex items-center justify-center gap-1 bg-pink-50 text-pink-600 py-1.5 rounded border border-pink-100">
                       <Heart size={10} className="fill-current"/> 
-                      <span>羁绊生效：{beauty.perks?.follow || beauty.buffDesc}</span>
+                      <span>羁绊生效：{beauty.buffDesc}</span>
                     </div>
                   )}
                 </div>
@@ -649,7 +809,7 @@ export default function App() {
               {rank < 4 && (
                 <button onClick={()=>{
                   const next = RANKS[rank+1];
-                  if(cash>=next.req.cash && myProperties.length+myIndustries.length >= next.req.cities) { // 简化条件
+                  if(cash>=next.req.cash && myProperties.length+myIndustries.length >= next.req.cities) {
                     setRank(r=>r+1); showModal('good','晋升',`成为${next.title}!`);
                   } else {
                     showModal('bad','未达标',`需银两${next.req.cash}，资产${next.req.cities}`);
@@ -680,11 +840,16 @@ export default function App() {
 
       </div>
 
+      {/* 底部日志 */}
+      <div className="h-20 bg-stone-100 border-t border-stone-200 p-2 overflow-y-auto text-[10px] font-mono text-stone-500">
+        {logs.slice().reverse().map((l, i) => <div key={i} className="mb-0.5">· {l}</div>)}
+      </div>
+
       {/* 底部导航 */}
       <nav className="bg-white border-t border-stone-200 px-2 py-2 flex justify-between items-center text-[10px]">
         {[
           {id:'market', icon:ShoppingBag, l:'集市'},
-          {id:'industry', icon:Sprout, l:'产业'}, // 新入口
+          {id:'industry', icon:Sprout, l:'产业'},
           {id:'travel', icon:Map, l:'世界'},
           {id:'beauties', icon:Heart, l:'知己'},
           {id:'assets', icon:Crown, l:'家族'}
@@ -720,6 +885,59 @@ export default function App() {
         </div>
       )}
 
+      {showSystem && (
+        <SystemModal 
+          onClose={()=>setShowSystem(false)} 
+          onExport={exportSave} 
+          onImport={importSave} 
+          onReset={hardReset} 
+          importText={importText} 
+          setImportText={setImportText} 
+        />
+      )}
+
+    </div>
+  );
+}
+
+// 独立的系统设置组件
+function SystemModal({ onClose, onExport, onImport, onReset, importText, setImportText }) {
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div className="bg-stone-900 text-amber-50 w-full max-w-sm rounded-xl p-6 border border-stone-700" onClick={e=>e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-xl font-bold flex items-center gap-2"><Save className="text-amber-500"/> 游戏系统</h2>
+          <button onClick={onClose}><X/></button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="p-4 bg-stone-800 rounded-lg">
+            <h3 className="text-sm font-bold text-stone-400 mb-2">导出存档</h3>
+            <button onClick={onExport} className="w-full py-2 bg-amber-700 hover:bg-amber-600 rounded flex items-center justify-center gap-2 text-sm font-bold">
+              <Download size={16}/> 复制通关文牒 (存档码)
+            </button>
+          </div>
+
+          <div className="p-4 bg-stone-800 rounded-lg">
+            <h3 className="text-sm font-bold text-stone-400 mb-2">导入存档</h3>
+            <textarea 
+              value={importText}
+              onChange={(e)=>setImportText(e.target.value)}
+              placeholder="在此粘贴存档码..."
+              className="w-full bg-stone-900 border border-stone-700 rounded p-2 text-xs mb-2 h-20 text-stone-300"
+            />
+            <button onClick={onImport} className="w-full py-2 bg-blue-700 hover:bg-blue-600 rounded flex items-center justify-center gap-2 text-sm font-bold">
+              <Upload size={16}/> 读取进度
+            </button>
+          </div>
+
+          <div className="pt-4 border-t border-stone-700">
+            <button onClick={onReset} className="w-full py-2 border border-red-900 text-red-500 hover:bg-red-900/20 rounded flex items-center justify-center gap-2 text-sm">
+              <Trash2 size={16}/> 删档重来
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
