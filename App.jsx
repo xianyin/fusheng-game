@@ -6,7 +6,7 @@ import {
   AlertCircle, Heart, Gift, X, Trophy, CloudLightning, Sun, Umbrella, 
   Zap, Info, RefreshCw, Backpack, Crown, Hammer, Snowflake, Flower, 
   Leaf, UserPlus, Star, Scroll, Anchor, Sprout, Factory, Baby, 
-  Save, Download, Upload, Trash2, Moon, BookOpen
+  Save, Download, Upload, Trash2, Moon, BookOpen, Skull
 } from 'lucide-react';
 
 // --- 1. 核心常量定义 ---
@@ -116,17 +116,17 @@ const SAVE_KEY = 'FUSHENG_GAME_SAVE_V1';
 export default function App() {
   // --- 状态管理 ---
   
-  // 家族/传承/永续状态 (Layer 3 & 4)
+  // 家族/传承/永续状态
   const [generation, setGeneration] = useState(1);
   const [familyLog, setFamilyLog] = useState([]); 
   const [legacy, setLegacy] = useState(null); 
-  const [collections, setCollections] = useState([]); // 家族藏馆 (古籍/风物)
+  const [collections, setCollections] = useState([]); 
   const [activeTalent, setActiveTalent] = useState(null);
   
-  // 当前世状态 (Layer 1 & 2)
+  // 当前世状态
   const [gameStarted, setGameStarted] = useState(false);
   const [showInheritUI, setShowInheritUI] = useState(false); 
-  const [isLoaded, setIsLoaded] = useState(false); // 存档加载标记
+  const [isLoaded, setIsLoaded] = useState(false); 
   
   const [cities, setCities] = useState([]);
   const [beauties, setBeauties] = useState([]);
@@ -152,27 +152,25 @@ export default function App() {
   const [logs, setLogs] = useState([]);
   const [modal, setModal] = useState(null);
   const [showBag, setShowBag] = useState(false);
-  const [showSystem, setShowSystem] = useState(false); // 系统/设置页
+  const [showSystem, setShowSystem] = useState(false); 
   const [importText, setImportText] = useState("");
+  const [tradeModal, setTradeModal] = useState(null); 
   const logsEndRef = useRef(null);
 
   // --- 1. 存档/读档系统 ---
 
-  // 挂载时尝试读取存档
   useEffect(() => {
     const loadGame = () => {
       try {
         const savedData = localStorage.getItem(SAVE_KEY);
         if (savedData) {
           const data = JSON.parse(savedData);
-          // 恢复全局状态
           setGeneration(data.global.generation || 1);
           setFamilyLog(data.global.familyLog || []);
           setLegacy(data.global.legacy || null);
           setCollections(data.global.collections || []);
           setUnlockedAchievements(data.global.unlockedAchievements || []);
           
-          // 恢复当前状态
           if (data.current) {
             setCash(data.current.cash);
             setHealth(data.current.health);
@@ -192,18 +190,16 @@ export default function App() {
             setGameStarted(true);
             setLogs(data.current.logs || []);
 
-            // 离线收益结算 (Offline Gains)
             if (data.timestamp) {
               const now = Date.now();
               const diffHours = (now - data.timestamp) / (1000 * 60 * 60);
-              if (diffHours > 1) { // 离线超过1小时
+              if (diffHours > 1) { 
                 const hours = Math.min(24, Math.floor(diffHours));
                 const rankIncome = RANKS[data.current.rank || 0].idleIncome || 0;
                 let propIncome = 0;
                 (data.current.myProperties || []).forEach(p => {
                    propIncome += (PROPERTIES.find(def => def.id === p.id)?.income || 0) * p.count;
                 });
-                // 离线收益打折 50%
                 const totalOfflineGain = Math.floor((rankIncome + propIncome) * hours * 0.5);
                 if (totalOfflineGain > 0) {
                   setCash(prev => prev + totalOfflineGain);
@@ -212,11 +208,9 @@ export default function App() {
               }
             }
           } else {
-            // 有全局存档但没有当前游戏 (刚传承完)
             setShowInheritUI(true);
           }
         } else {
-          // 全新游戏
           initGame();
         }
       } catch (e) {
@@ -228,7 +222,6 @@ export default function App() {
     loadGame();
   }, []);
 
-  // 状态变化时自动保存 (节流保存建议在生产环境中做，这里简化为每次变动保存关键数据)
   useEffect(() => {
     if (!isLoaded || !gameStarted) return;
     
@@ -241,7 +234,7 @@ export default function App() {
       current: {
         cash, health, day, location, inventory, rank, skills,
         cities, beauties, relationships, myProperties, myIndustries,
-        marketPrices, stockMarket, activeTalent, logs: logs.slice(-20) // 只存最近日志
+        marketPrices, stockMarket, activeTalent, logs: logs.slice(-20) 
       }
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
@@ -253,13 +246,11 @@ export default function App() {
     if (!data) return showModal('bad', '无存档', '尚无游戏记录');
     
     try {
-      const encoded = btoa(unescape(encodeURIComponent(data))); // Base64 编码防乱码
+      const encoded = btoa(unescape(encodeURIComponent(data))); 
       
-      // Fallback for iframe/sandbox restrictions
       const textArea = document.createElement("textarea");
       textArea.value = encoded;
       
-      // Ensure it's not visible but part of the DOM
       textArea.style.position = "fixed";
       textArea.style.left = "-9999px";
       textArea.style.top = "0";
@@ -293,7 +284,7 @@ export default function App() {
     if (!importText) return;
     try {
       const decoded = decodeURIComponent(escape(atob(importText)));
-      JSON.parse(decoded); // 校验 JSON 格式
+      JSON.parse(decoded); 
       localStorage.setItem(SAVE_KEY, decoded);
       showModal('good', '导入成功', '即将刷新页面加载存档...');
       setTimeout(() => window.location.reload(), 1500);
@@ -302,18 +293,22 @@ export default function App() {
     }
   };
 
-  // 重置游戏
+  // 重置游戏 (Hard Reset)
   const hardReset = () => {
-    if (confirm('确定要删除所有存档吗？包括家族族谱和收藏！此操作不可逆！')) {
-      localStorage.removeItem(SAVE_KEY);
-      window.location.reload();
-    }
+    localStorage.removeItem(SAVE_KEY);
+    window.location.reload();
   };
 
   // --- 滚动日志 ---
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
+
+  // --- 核心逻辑 ---
+
+  const addLog = (msg) => {
+    setLogs(prev => [...prev, `[第${day}日] ${msg}`]);
+  };
 
   // --- 世代挑战 ---
   useEffect(() => {
@@ -336,7 +331,6 @@ export default function App() {
   }, [day, cash, myProperties, myIndustries, relationships, rank, skills]);
 
   const initGame = (selectedTalent = null) => {
-    // 1. 世界生成
     const selectedCities = shuffleArray(CITY_POOL).slice(0, 5); 
     setCities(selectedCities);
     setLocation(selectedCities[0].id);
@@ -347,7 +341,6 @@ export default function App() {
     selectedBeauties.forEach(b => initRel[b.id] = { lv: 1, exp: 0, following: false, unlocked: false });
     setRelationships(initRel);
 
-    // 2. 资金继承与波动
     let startCash = Math.floor(Math.random() * 1000) + 800; 
     if (legacy) {
       startCash += Math.floor(legacy.cash * 0.7); 
@@ -356,7 +349,6 @@ export default function App() {
     if (selectedTalent?.type === 'cash') startCash += selectedTalent.val;
     setCash(startCash);
 
-    // 3. 技艺继承
     const initSkills = { weaving: 0, tea_art: 0, smithing: 0, ceramics: 0, alchemy: 0 };
     if (legacy) {
       Object.keys(legacy.skills).forEach(k => {
@@ -366,12 +358,10 @@ export default function App() {
     }
     setSkills(initSkills);
 
-    // 4. 天赋应用
     setActiveTalent(selectedTalent);
     if (selectedTalent?.type === 'health') setHealth(150);
     else setHealth(100);
 
-    // 5. 初始化其他
     setDay(1);
     setInventory({});
     setMyProperties([]);
@@ -380,13 +370,10 @@ export default function App() {
     setRank(0);
     setLogs([`第 ${generation} 世开启。你的身份是：${RANKS[0].title}。目标：${GENERATION_GOALS.find(g=>g.gen===generation)?.desc || '活下去'}`]);
     
-    // 初始价格
     refreshPrices(selectedCities, 0);
     setGameStarted(true);
     setShowInheritUI(false);
   };
-
-  // --- 核心逻辑 ---
 
   const refreshPrices = (currentCities, dayCount) => {
     const termIdx = Math.floor((dayCount % 365) / 15) % 24;
@@ -399,14 +386,11 @@ export default function App() {
         if (good.type === 'raw' && good.producedBy) return; 
         
         let base = good.basePrice;
-        // 节气/季节影响
         if (term.name === '清明' && good.id === 'raw_tea') base *= 0.5; 
         if (term.name === '寒露' && good.id === 'silk') base *= 1.3;
         if (term.name === '大寒' && (good.id === 'wine' || good.id === 'rice')) base *= 1.5;
 
-        // 随机波动
         let price = Math.round(base * (1 + (Math.random() - 0.5) * 2 * good.volatility));
-        // 皇商加成
         if (rank >= 3 && Math.random() < 0.2) price = Math.round(price * 1.4);
         
         cityPrices[good.id] = Math.max(1, price);
@@ -422,7 +406,6 @@ export default function App() {
     const currentTerm = SOLAR_TERMS[termIdx];
     let dailyLog = [];
 
-    // 1. 产业生产
     const newIndustries = myIndustries.map(ind => {
       const def = INDUSTRIES.find(i => i.id === ind.id);
       let production = 0;
@@ -440,7 +423,6 @@ export default function App() {
     });
     setMyIndustries(newIndustries);
 
-    // 2. 移动/休息
     let healthChange = 0;
     if (targetCityId) {
       const baseCost = 80;
@@ -451,7 +433,6 @@ export default function App() {
       setCash(c => c - cost);
       setLocation(targetCityId);
       healthChange = -5 * daysPass;
-      // 节气恶劣天气
       if (['大暑', '冬至', '大寒'].includes(currentTerm.name)) healthChange *= 2;
       
       const cityName = cities.find(c=>c.id===targetCityId)?.name || '未知';
@@ -464,7 +445,6 @@ export default function App() {
       dailyLog.push(`修整${daysPass}天。`);
     }
 
-    // 3. 房产收益
     let propIncome = 0;
     const incomeBuff = Object.values(relationships).some(r => r.following && r.lv>=3) ? 1.5 : 1;
     myProperties.forEach(p => {
@@ -476,7 +456,6 @@ export default function App() {
       dailyLog.push(`房产收益 +${finalIncome}`);
     }
 
-    // 4. 结算
     setDay(newDay);
     setHealth(h => Math.min(activeTalent?.type==='health'?150:100, Math.max(0, h + healthChange)));
     refreshPrices(cities, newDay);
@@ -487,13 +466,11 @@ export default function App() {
 
     dailyLog.forEach(l => addLog(l));
 
-    // 死亡/退休判定
     if (health + healthChange <= 0 || newDay >= 365 * 3) { 
       handleEndGeneration(health + healthChange <= 0 ? '病逝' : '寿终正寝');
     }
   };
 
-  // --- 制造逻辑 ---
   const craftItem = (recipeId) => {
     const recipe = RECIPES.find(r => r.id === recipeId);
     const hasMat = (inventory[recipe.mat] || 0) > 0;
@@ -514,7 +491,35 @@ export default function App() {
     }
   };
 
-  // --- 世代结束/传承 ---
+  const interactNPC = (id, action) => {
+    const npc = beauties.find(b => b.id === id);
+    const rel = relationships[id];
+    
+    if (action === 'visit') {
+      if (cash < 100) return showModal('bad', '囊中羞涩', '拜访需要带点礼物(100两)');
+      setCash(prev => prev - 100);
+      setRelationships(prev => ({
+        ...prev, 
+        [id]: { ...rel, unlocked: true, exp: rel.exp + 10 }
+      }));
+      if (rel.exp + 10 >= rel.lv * 50) {
+        setRelationships(prev => ({
+          ...prev, 
+          [id]: { ...prev[id], lv: rel.lv + 1, exp: 0 }
+        }));
+        showModal('good', '感情升温', `${npc.name} 对你的好感提升到了 Lv${rel.lv + 1}！`);
+      } else {
+        addLog(`拜访了${npc.name}，相谈甚欢。`);
+      }
+    } else if (action === 'follow') {
+      if (rel.lv < 3) return showModal('bad', '羁绊不足', '好感度达到 Lv3 才能邀请跟随。');
+      setRelationships(prev => ({
+        ...prev,
+        [id]: { ...rel, following: !rel.following }
+      }));
+    }
+  };
+
   const handleEndGeneration = (reason) => {
     const totalAssets = calculateTotalAssets();
     const historyEntry = {
@@ -528,12 +533,11 @@ export default function App() {
     setFamilyLog(prev => [historyEntry, ...prev]);
     setLegacy({ cash: totalAssets, skills: skills });
     
-    // 自动保存一下，防止刷新丢失
     const saveData = {
         version: '1.0',
         timestamp: Date.now(),
         global: { generation: generation + 1, familyLog: [historyEntry, ...familyLog], legacy: { cash: totalAssets, skills: skills }, unlockedAchievements, collections },
-        current: null // 清空当前局数据
+        current: null 
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
 
@@ -554,11 +558,62 @@ export default function App() {
 
   const showModal = (type, title, desc) => setModal({ type, title, desc });
 
-  // 1. 传承选择界面
+  const openTradeModal = (goodId, type, price) => {
+    const good = GOODS_POOL.find(g => g.id === goodId);
+    let max = 0;
+    
+    if (type === 'buy') {
+      const maxAfford = Math.floor(cash / price);
+      const space = getMaxInventory() - Object.values(inventory).reduce((a, b) => a + b, 0);
+      max = Math.min(maxAfford, space);
+    } else {
+      max = inventory[goodId] || 0;
+    }
+
+    if (max <= 0) {
+      if (type === 'buy') {
+        if (cash < price) return showModal('bad', '穷', '钱不够买哪怕一个');
+        return showModal('bad', '满', '背包已满');
+      } else {
+        return;
+      }
+    }
+
+    setTradeModal({ 
+      good, 
+      type, 
+      price, 
+      max, 
+      amount: 1 
+    });
+  };
+
+  const confirmTrade = () => {
+    if (!tradeModal) return;
+    const { good, type, price, amount } = tradeModal;
+    const total = price * amount;
+
+    if (type === 'buy') {
+      setCash(c => c - total);
+      setInventory(prev => ({...prev, [good.id]: (prev[good.id] || 0) + amount}));
+    } else {
+      setCash(c => c + total);
+      setInventory(prev => ({...prev, [good.id]: prev[good.id] - amount}));
+    }
+    setTradeModal(null);
+  };
+
+  const getMaxInventory = () => {
+    let bonus = 0;
+    if (Object.values(relationships).some(r => r.following && r.lv >= 3)) {
+        bonus = 50; 
+    }
+    return BASE_INVENTORY_CAPACITY + bonus;
+  };
+
   if (showInheritUI) {
     return (
       <div className="min-h-screen bg-stone-900 text-amber-50 flex flex-col items-center justify-center p-6 relative">
-        {/* 系统按钮 */}
         <button onClick={()=>setShowSystem(true)} className="absolute top-4 right-4 p-2 bg-stone-800 rounded-full hover:bg-stone-700 border border-stone-600">
             <Save size={20} />
         </button>
@@ -593,13 +648,11 @@ export default function App() {
           </div>
         </div>
 
-        {/* 系统弹窗 (复用) */}
         {showSystem && <SystemModal onClose={()=>setShowSystem(false)} onExport={exportSave} onImport={importSave} onReset={hardReset} importText={importText} setImportText={setImportText} />}
       </div>
     );
   }
 
-  // 2. 主游戏界面
   if (!isLoaded || (!gameStarted && generation === 1)) return <div className="min-h-screen flex items-center justify-center bg-[#fffcf5] text-stone-600">载入历史长河...</div>;
 
   const currentCityData = cities.find(c => c.id === location) || cities[0] || {name: '未知', desc: ''};
@@ -607,9 +660,8 @@ export default function App() {
   const currentTerm = SOLAR_TERMS[termIdx];
 
   return (
-    <div className="min-h-screen bg-[#fffcf5] text-stone-800 font-sans flex flex-col max-w-md mx-auto shadow-2xl relative">
-      {/* 顶部 */}
-      <div className="bg-orange-700 text-white p-4 pb-8 rounded-b-3xl shadow-lg z-10">
+    <div className="h-screen bg-[#fffcf5] text-stone-800 font-sans flex flex-col max-w-md mx-auto shadow-2xl relative overflow-hidden">
+      <div className="bg-orange-700 text-white p-4 pb-4 shadow-lg z-10 shrink-0">
         <div className="flex justify-between items-start mb-4">
           <div>
             <div className="flex items-center gap-2">
@@ -634,10 +686,8 @@ export default function App() {
         </div>
       </div>
 
-      {/* 内容 */}
-      <div className="flex-1 overflow-y-auto p-4 -mt-6 pt-6 pb-24 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fffcf5]">
         
-        {/* 市场 */}
         {activeTab === 'market' && (
           <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
             <h2 className="font-bold mb-3 flex items-center text-stone-700"><ShoppingBag className="mr-2 text-orange-600" size={18}/> {currentCityData.name}集市</h2>
@@ -652,14 +702,20 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs w-6 text-center">{inventory[good.id]||0}</span>
-                      <button onClick={()=>{
-                        if(!price || !inventory[good.id]) return;
-                        setCash(c=>c+price); setInventory(i=>({...i,[good.id]:i[good.id]-1}));
-                      }} className="w-7 h-7 bg-stone-200 rounded font-bold text-stone-600">-</button>
-                      <button onClick={()=>{
-                        if(!price || cash<price) return showModal('bad','穷','钱不够');
-                        setCash(c=>c-price); setInventory(i=>({...i,[good.id]:(i[good.id]||0)+1}));
-                      }} className="w-7 h-7 bg-orange-600 rounded font-bold text-white">+</button>
+                      <button 
+                        onClick={() => openTradeModal(good.id, 'sell', price)}
+                        disabled={!price || !inventory[good.id]}
+                        className="w-8 h-8 bg-stone-200 rounded font-bold text-stone-600 disabled:opacity-30"
+                      >
+                        -
+                      </button>
+                      <button 
+                        onClick={() => openTradeModal(good.id, 'buy', price)}
+                        disabled={!price}
+                        className="w-8 h-8 bg-orange-600 rounded font-bold text-white disabled:opacity-30"
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
                 );
@@ -668,7 +724,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 产业 */}
         {activeTab === 'industry' && (
           <div className="space-y-4">
             <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
@@ -718,7 +773,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 移动/世界 */}
         {activeTab === 'travel' && (
           <div className="space-y-3">
             {cities.map(city => {
@@ -737,7 +791,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 知己 */}
         {activeTab === 'beauties' && (
           <div className="space-y-4">
             {beauties.map(beauty => {
@@ -759,7 +812,6 @@ export default function App() {
                       </div>
                       <p className="text-xs text-stone-500 mt-1 line-clamp-1">{beauty.desc}</p>
                       
-                      {/* 羁绊进度条 */}
                       <div className="w-full bg-stone-100 h-1.5 rounded-full mt-3 mb-1">
                         <div className="bg-pink-400 h-1.5 rounded-full transition-all" style={{width: `${Math.min(100, (rel.exp / (rel.lv*50))*100)}%`}}></div>
                       </div>
@@ -799,7 +851,6 @@ export default function App() {
           </div>
         )}
 
-        {/* 资产/身份 */}
         {activeTab === 'assets' && (
           <div className="space-y-4">
             <div className="bg-gradient-to-br from-stone-800 to-stone-900 text-amber-50 p-4 rounded-xl shadow-lg">
@@ -840,13 +891,11 @@ export default function App() {
 
       </div>
 
-      {/* 底部日志 */}
-      <div className="h-20 bg-stone-100 border-t border-stone-200 p-2 overflow-y-auto text-[10px] font-mono text-stone-500">
+      <div className="h-24 bg-stone-100 border-t border-stone-200 p-2 overflow-y-auto text-[10px] font-mono text-stone-500 shrink-0">
         {logs.slice().reverse().map((l, i) => <div key={i} className="mb-0.5">· {l}</div>)}
       </div>
 
-      {/* 底部导航 */}
-      <nav className="bg-white border-t border-stone-200 px-2 py-2 flex justify-between items-center text-[10px]">
+      <nav className="bg-white border-t border-stone-200 px-2 py-2 flex justify-between items-center text-[10px] shrink-0 pb-safe">
         {[
           {id:'market', icon:ShoppingBag, l:'集市'},
           {id:'industry', icon:Sprout, l:'产业'},
@@ -860,7 +909,6 @@ export default function App() {
         ))}
       </nav>
 
-      {/* 弹窗们 */}
       {modal && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={()=>setModal(null)}>
           <div className="bg-white rounded-xl p-6 w-full max-w-sm text-center" onClick={e=>e.stopPropagation()}>
@@ -885,6 +933,40 @@ export default function App() {
         </div>
       )}
 
+      {tradeModal && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={() => setTradeModal(null)}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold mb-2 text-center">
+              {tradeModal.type === 'buy' ? '购买' : '出售'} {tradeModal.good.name}
+            </h3>
+            <div className="mb-4">
+              <div className="flex justify-between text-sm text-stone-500 mb-2">
+                <span>单价: {tradeModal.price}</span>
+                <span>最大: {tradeModal.max}</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <input 
+                  type="range" 
+                  min="1" 
+                  max={tradeModal.max} 
+                  value={tradeModal.amount} 
+                  onChange={(e) => setTradeModal({...tradeModal, amount: parseInt(e.target.value)})}
+                  className="flex-1"
+                />
+                <span className="font-mono text-lg font-bold w-12 text-center">{tradeModal.amount}</span>
+              </div>
+              <div className="text-center mt-2 font-bold text-orange-600">
+                总价: {tradeModal.price * tradeModal.amount}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setTradeModal(null)} className="flex-1 py-2 bg-stone-200 text-stone-600 rounded-lg">取消</button>
+              <button onClick={confirmTrade} className="flex-1 py-2 bg-orange-600 text-white rounded-lg">确认</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showSystem && (
         <SystemModal 
           onClose={()=>setShowSystem(false)} 
@@ -902,6 +984,8 @@ export default function App() {
 
 // 独立的系统设置组件
 function SystemModal({ onClose, onExport, onImport, onReset, importText, setImportText }) {
+  const [resetConfirm, setResetConfirm] = useState(false);
+
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div className="bg-stone-900 text-amber-50 w-full max-w-sm rounded-xl p-6 border border-stone-700" onClick={e=>e.stopPropagation()}>
@@ -932,8 +1016,18 @@ function SystemModal({ onClose, onExport, onImport, onReset, importText, setImpo
           </div>
 
           <div className="pt-4 border-t border-stone-700">
-            <button onClick={onReset} className="w-full py-2 border border-red-900 text-red-500 hover:bg-red-900/20 rounded flex items-center justify-center gap-2 text-sm">
-              <Trash2 size={16}/> 删档重来
+            <button 
+              onClick={() => {
+                if (resetConfirm) {
+                  onReset();
+                } else {
+                  setResetConfirm(true);
+                  setTimeout(() => setResetConfirm(false), 3000);
+                }
+              }} 
+              className={`w-full py-2 border ${resetConfirm ? 'bg-red-600 text-white border-red-600' : 'border-red-900 text-red-500 hover:bg-red-900/20'} rounded flex items-center justify-center gap-2 text-sm transition-all`}
+            >
+              <Trash2 size={16}/> {resetConfirm ? '再次点击确认删除所有存档' : '重新开启人生 (删档)'}
             </button>
           </div>
         </div>
