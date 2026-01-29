@@ -7,7 +7,7 @@ import {
   Zap, Info, RefreshCw, Backpack, Crown, Hammer, Snowflake, Flower, 
   Leaf, UserPlus, Star, Scroll, Anchor, Sprout, Factory, Baby, 
   Save, Download, Upload, Trash2, Moon, BookOpen, Skull, Settings, Users, LogOut,
-  ArrowUp, ArrowDown, Minus, Briefcase, CircleHelp, Calendar, Pickaxe
+  ArrowUp, ArrowDown, Minus, Briefcase, HelpCircle, Calendar, Pickaxe
 } from 'lucide-react';
 
 // --- 0. 基础工具函数 ---
@@ -64,9 +64,9 @@ const PROPERTIES = [
 ];
 
 const INDUSTRIES = [
-  { id: 'mulberry_farm', name: '太湖桑园', cost: 5000, product: 'cocoon', rate: 5, desc: '每5天产出桑蚕茧' },
-  { id: 'tea_mountain', name: '龙井茶山', cost: 8000, product: 'raw_tea', rate: 5, desc: '每5天产出生茶' },
-  { id: 'mine', name: '徐州铁矿', cost: 12000, product: 'ore', rate: 7, desc: '每7天产出铁矿' },
+  { id: 'mulberry_farm', name: '太湖桑园', cost: 5000, product: 'cocoon', rate: 5, desc: '每5天产出桑蚕茧，春季产量翻倍。' },
+  { id: 'tea_mountain', name: '龙井茶山', cost: 8000, product: 'raw_tea', rate: 5, desc: '每5天产出生茶，清明谷雨产量大增。' },
+  { id: 'mine', name: '徐州铁矿', cost: 12000, product: 'ore', rate: 7, desc: '每7天产出铁矿，产量稳定。' },
 ];
 
 const RECIPES = [
@@ -723,7 +723,7 @@ export default function App() {
                         <button 
                           onClick={() => openTradeModal(good.id, 'buy', price)}
                           disabled={!price}
-                          className="px-3 py-1 bg-[#5c3a21] text-[#f8e8c8] text-xs rounded hover:bg-[#4e311b] disabled:opacity-30 shadow-sm active:translate-y-0.5 transition-all font-serif"
+                          className="px-3 py-1 bg-[#8b5a3b] text-[#f8e8c8] text-xs rounded hover:bg-[#6b442a] disabled:opacity-30 shadow-sm active:translate-y-0.5 transition-all font-serif"
                         >
                           购入
                         </button>
