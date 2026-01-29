@@ -661,7 +661,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex gap-2">
-             <button onClick={()=>setShowHelp(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><CircleHelp size={18}/></button>
+             <button onClick={()=>setShowHelp(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><HelpCircle size={18}/></button>
              <button onClick={() => setShowSystem(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><Settings size={18}/></button>
              <button onClick={() => setShowBag(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><Backpack size={18}/></button>
           </div>
