@@ -7,7 +7,7 @@ import {
   Zap, Info, RefreshCw, Backpack, Crown, Hammer, Snowflake, Flower, 
   Leaf, UserPlus, Star, Scroll, Anchor, Sprout, Factory, Baby, 
   Save, Download, Upload, Trash2, Moon, BookOpen, Skull, Settings, Users, LogOut,
-  ArrowUp, ArrowDown, Minus, Briefcase
+  ArrowUp, ArrowDown, Minus, Briefcase, CircleHelp, Calendar, Pickaxe
 } from 'lucide-react';
 
 // --- 0. 基础工具函数 ---
@@ -64,9 +64,9 @@ const PROPERTIES = [
 ];
 
 const INDUSTRIES = [
-  { id: 'mulberry_farm', name: '太湖桑园', cost: 5000, product: 'cocoon', rate: 5, desc: '每5天产出桑蚕茧，春季产量翻倍。' },
-  { id: 'tea_mountain', name: '龙井茶山', cost: 8000, product: 'raw_tea', rate: 5, desc: '每5天产出生茶，清明谷雨产量大增。' },
-  { id: 'mine', name: '徐州铁矿', cost: 12000, product: 'ore', rate: 7, desc: '每7天产出铁矿，产量稳定。' },
+  { id: 'mulberry_farm', name: '太湖桑园', cost: 5000, product: 'cocoon', rate: 5, desc: '每5天产出桑蚕茧' },
+  { id: 'tea_mountain', name: '龙井茶山', cost: 8000, product: 'raw_tea', rate: 5, desc: '每5天产出生茶' },
+  { id: 'mine', name: '徐州铁矿', cost: 12000, product: 'ore', rate: 7, desc: '每7天产出铁矿' },
 ];
 
 const RECIPES = [
@@ -145,13 +145,14 @@ export default function App() {
   const [myIndustries, setMyIndustries] = useState([]); 
   const [relationships, setRelationships] = useState({});
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
-  const [marketTrend, setMarketTrend] = useState(null); // Add missing state for market trend
+  const [marketTrend, setMarketTrend] = useState(null); 
 
   const [activeTab, setActiveTab] = useState('market');
   const [logs, setLogs] = useState([]);
   const [modal, setModal] = useState(null);
   const [showBag, setShowBag] = useState(false);
-  const [showSystem, setShowSystem] = useState(false); 
+  const [showSystem, setShowSystem] = useState(false);
+  const [showHelp, setShowHelp] = useState(false); 
   const [importText, setImportText] = useState("");
   const [tradeModal, setTradeModal] = useState(null); 
   const logsEndRef = useRef(null);
@@ -369,13 +370,7 @@ export default function App() {
         if (term.name === '寒露' && good.id === 'silk') base *= 1.3;
         if (term.name === '大寒' && (good.id === 'wine' || good.id === 'rice')) base *= 1.5;
 
-        // Market trend logic can be added here if needed, keeping simple random for now
-        let trendMult = 1;
-        if (marketTrend && marketTrend.targetGoodsId === good.id) {
-             trendMult = marketTrend.multiplier;
-        }
-
-        let price = Math.round(base * (1 + (Math.random() - 0.5) * 2 * good.volatility) * trendMult);
+        let price = Math.round(base * (1 + (Math.random() - 0.5) * 2 * good.volatility));
         if (rank >= 3 && Math.random() < 0.2) price = Math.round(price * 1.4);
         
         cityPrices[good.id] = Math.max(1, price);
@@ -390,19 +385,6 @@ export default function App() {
     const termIdx = Math.floor((newDay % 365) / 15) % 24;
     const currentTerm = SOLAR_TERMS[termIdx];
     let dailyLog = [];
-
-    // Market trend update
-    if (newDay % 3 === 0 && Math.random() < 0.2) {
-         const targetGood = GOODS_POOL[Math.floor(Math.random() * GOODS_POOL.length)];
-         const isBoom = Math.random() > 0.5;
-         setMarketTrend({
-             targetGoodsId: targetGood.id,
-             multiplier: isBoom ? 1.5 : 0.6,
-             effectDesc: isBoom ? `${targetGood.name}价格飞涨！` : `${targetGood.name}价格暴跌！`
-         });
-    } else if (newDay % 3 === 0) {
-        setMarketTrend(null);
-    }
 
     const newIndustries = myIndustries.map(ind => {
       const def = INDUSTRIES.find(i => i.id === ind.id);
@@ -679,6 +661,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex gap-2">
+             <button onClick={()=>setShowHelp(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><CircleHelp size={18}/></button>
              <button onClick={() => setShowSystem(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><Settings size={18}/></button>
              <button onClick={() => setShowBag(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><Backpack size={18}/></button>
           </div>
@@ -711,7 +694,6 @@ export default function App() {
             <div className="space-y-3">
               {GOODS_POOL.filter(g => g.type !== 'raw' || !g.producedBy).map(good => { 
                 const price = marketPrices[location]?.[good.id];
-                // 简单的价格趋势模拟 (实际项目中应记录历史价格)
                 const trend = price > good.basePrice ? 'up' : price < good.basePrice ? 'down' : 'flat';
                 
                 return (
@@ -741,7 +723,7 @@ export default function App() {
                         <button 
                           onClick={() => openTradeModal(good.id, 'buy', price)}
                           disabled={!price}
-                          className="px-3 py-1 bg-[#8b5a3b] text-[#f8e8c8] text-xs rounded hover:bg-[#6b442a] disabled:opacity-30 shadow-sm active:translate-y-0.5 transition-all font-serif"
+                          className="px-3 py-1 bg-[#5c3a21] text-[#f8e8c8] text-xs rounded hover:bg-[#4e311b] disabled:opacity-30 shadow-sm active:translate-y-0.5 transition-all font-serif"
                         >
                           购入
                         </button>
@@ -754,18 +736,25 @@ export default function App() {
           </div>
         )}
 
-        {/* 产业 */}
+        {/* 产业 (UI Updated) */}
         {activeTab === 'industry' && (
           <div className="space-y-4">
             <div className="bg-[#fdfbf7] p-4 rounded-xl shadow-sm border border-[#e6d0a3]">
-              <h2 className="font-bold mb-3 flex items-center text-[#5c3a21] font-serif border-b border-[#e6d0a3] pb-2"><Sprout className="mr-2 text-green-700" size={18}/> 家族产业</h2>
+              <h2 className="font-bold mb-3 flex items-center text-[#5c3a21] font-serif border-b border-[#e6d0a3] pb-2">
+                <Sprout className="mr-2 text-green-700" size={18}/> 家族产业
+              </h2>
               {INDUSTRIES.map(ind => {
                 const owned = myIndustries.find(i => i.id === ind.id);
                 return (
                   <div key={ind.id} className="flex justify-between items-center mb-3 pb-3 border-b border-[#f0e4d0] last:border-0 last:pb-0">
                     <div>
-                      <div className="font-bold text-sm text-[#5c3a21]">{ind.name}</div>
-                      <div className="text-xs text-stone-500">{ind.desc}</div>
+                      <div className="font-bold text-sm text-[#5c3a21] flex items-center gap-2">
+                        {ind.name}
+                        {ind.product === 'ore' && <Pickaxe size={12} className="text-stone-400"/>}
+                      </div>
+                      <div className="text-xs text-stone-500 flex items-center gap-1">
+                        <Calendar size={10} className="text-stone-400"/> {ind.desc}
+                      </div>
                     </div>
                     {owned ? (
                       <div className="text-right">
@@ -785,19 +774,32 @@ export default function App() {
             </div>
 
             <div className="bg-[#fdfbf7] p-4 rounded-xl shadow-sm border border-[#e6d0a3]">
-              <h2 className="font-bold mb-3 flex items-center text-[#5c3a21] font-serif border-b border-[#e6d0a3] pb-2"><Factory className="mr-2 text-blue-700" size={18}/> 技艺工坊</h2>
+              <h2 className="font-bold mb-3 flex items-center text-[#5c3a21] font-serif border-b border-[#e6d0a3] pb-2">
+                <Hammer className="mr-2 text-[#8b5a3b]" size={18}/> 技艺工坊
+              </h2>
               <div className="flex gap-2 mb-3 overflow-x-auto text-[10px] pb-1">
                 {Object.entries(skills).map(([k,v]) => (
-                  <span key={k} className="bg-blue-50 text-blue-700 px-2 py-1 rounded whitespace-nowrap border border-blue-100">{RECIPES.find(r=>r.id===k)?.name.slice(0,2) || k}:{v}</span>
+                  <span key={k} className="bg-[#f0e4d0] text-[#5c3a21] px-2 py-1 rounded whitespace-nowrap border border-[#e6d0a3]">
+                    {RECIPES.find(r=>r.id===k)?.name.slice(0,2) || k}: {v}
+                  </span>
                 ))}
               </div>
               {RECIPES.map(recipe => (
-                <div key={recipe.id} className="flex justify-between items-center bg-[#fff] p-2 rounded mb-2 border border-[#f0e4d0]">
+                <div key={recipe.id} className="flex justify-between items-center bg-[#fff] p-3 rounded mb-2 border border-[#e6d0a3]">
                   <div className="text-xs">
-                    <span className="font-bold text-[#5c3a21]">{recipe.name}</span>
-                    <div className="text-stone-500 scale-90 origin-left mt-0.5">{GOODS_POOL.find(g=>g.id===recipe.mat)?.name} → {GOODS_POOL.find(g=>g.id===recipe.product)?.name}</div>
+                    <span className="font-bold text-[#5c3a21] text-sm">{recipe.name}</span>
+                    <div className="text-stone-400 scale-95 origin-left mt-0.5 flex items-center gap-1">
+                      {GOODS_POOL.find(g=>g.id===recipe.mat)?.name} 
+                      <span className="text-stone-300">→</span> 
+                      <span className="text-[#8b5a3b]">{GOODS_POOL.find(g=>g.id===recipe.product)?.name}</span>
+                    </div>
                   </div>
-                  <button onClick={()=>craftItem(recipe.id)} className="text-xs bg-blue-700 text-white px-3 py-1.5 rounded hover:bg-blue-800 shadow-sm font-serif">制造 (费{recipe.cost})</button>
+                  <button 
+                    onClick={()=>craftItem(recipe.id)} 
+                    className="text-xs bg-[#5c3a21] text-[#f8e8c8] px-3 py-1.5 rounded hover:bg-[#4e311b] active:scale-95 transition-transform shadow-sm font-serif"
+                  >
+                    制造 (费{recipe.cost})
+                  </button>
                 </div>
               ))}
             </div>
@@ -977,6 +979,48 @@ export default function App() {
             <h3 className="text-lg font-bold mb-2 text-[#5c3a21] font-serif">{modal.title}</h3>
             <p className="text-sm text-stone-600 mb-6 whitespace-pre-wrap leading-relaxed">{modal.desc}</p>
             <button onClick={()=>setModal(null)} className="w-full py-2.5 bg-[#5c3a21] text-[#f8e8c8] rounded-lg font-bold hover:bg-[#4e311b] active:scale-95 transition-transform">朕知道了</button>
+          </div>
+        </div>
+      )}
+
+      {/* 帮助弹窗 */}
+      {showHelp && (
+        <div className="absolute inset-0 z-[65] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm" onClick={() => setShowHelp(false)}>
+          <div className="bg-[#fffcf5] w-full max-w-sm rounded-xl p-0 border-2 border-[#e6d0a3] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#5c3a21] p-3 flex justify-between items-center text-[#f8e8c8]">
+              <h3 className="font-bold font-serif text-lg flex items-center gap-2"><Scroll size={18}/> 商道指南</h3>
+              <button onClick={() => setShowHelp(false)}><X size={20}/></button>
+            </div>
+            <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto text-[#5c3a21]">
+              <div className="flex gap-3">
+                <div className="bg-[#f0e4d0] p-2 rounded-lg h-fit"><Coins size={20}/></div>
+                <div>
+                  <h4 className="font-bold mb-1">低买高卖</h4>
+                  <p className="text-xs text-stone-500 leading-relaxed">观察各地物价差异，利用节气变化（如清明茶贱、寒露丝贵）赚取差价。</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="bg-[#f0e4d0] p-2 rounded-lg h-fit"><Sprout size={20}/></div>
+                <div>
+                  <h4 className="font-bold mb-1">产业经营</h4>
+                  <p className="text-xs text-stone-500 leading-relaxed">购置桑园矿山获取免费原料，利用技艺加工成高价成品（如桑蚕茧→苏绣）。</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="bg-[#f0e4d0] p-2 rounded-lg h-fit"><Heart size={20}/></div>
+                <div>
+                  <h4 className="font-bold mb-1">红颜羁绊</h4>
+                  <p className="text-xs text-stone-500 leading-relaxed">结识各地佳人，提升好感可解锁强力增益（如房产收益加成、背包扩容）。</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <div className="bg-[#f0e4d0] p-2 rounded-lg h-fit"><Baby size={20}/></div>
+                <div>
+                  <h4 className="font-bold mb-1">家族传承</h4>
+                  <p className="text-xs text-stone-500 leading-relaxed">每一世积累的资产和技艺都会部分传承给后代，助你打造万世基业。</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
