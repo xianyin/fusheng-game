@@ -9,6 +9,13 @@ import {
   Save, Download, Upload, Trash2, Moon, BookOpen, Skull, Settings, Users, LogOut
 } from 'lucide-react';
 
+// --- 0. 基础工具函数 (修复Bug的关键) ---
+// 强制将任何值转换为有效数字，如果是 NaN/undefined/null 则返回默认值
+const safeNum = (val, defaultVal = 0) => {
+  const num = Number(val);
+  return Number.isFinite(num) ? num : defaultVal;
+};
+
 // --- 1. 核心常量定义 ---
 
 const SEASONS = ['春', '夏', '秋', '冬'];
@@ -172,9 +179,11 @@ export default function App() {
           setUnlockedAchievements(data.global.unlockedAchievements || []);
           
           if (data.current) {
-            setCash(data.current.cash);
-            setHealth(data.current.health);
-            setDay(data.current.day);
+            // FIX: 在读取时如果发现是NaN，强制重置
+            setCash(safeNum(data.current.cash, 1000));
+            setHealth(safeNum(data.current.health, 100));
+            setDay(safeNum(data.current.day, 1));
+            
             setLocation(data.current.location);
             setInventory(data.current.inventory || {});
             setRank(data.current.rank || 0);
@@ -200,9 +209,9 @@ export default function App() {
                 (data.current.myProperties || []).forEach(p => {
                    propIncome += (PROPERTIES.find(def => def.id === p.id)?.income || 0) * p.count;
                 });
-                const totalOfflineGain = Math.floor((rankIncome + propIncome) * hours * 0.5);
+                const totalOfflineGain = Math.floor(safeNum(rankIncome + propIncome) * hours * 0.5);
                 if (totalOfflineGain > 0) {
-                  setCash(prev => prev + totalOfflineGain);
+                  setCash(prev => safeNum(prev) + totalOfflineGain);
                   setTimeout(() => showModal('good', '离线收益', `你离开期间，商号伙计帮你赚了 ${totalOfflineGain} 两银子。\n(离线 ${hours} 小时)`), 1000);
                 }
               }
@@ -225,6 +234,9 @@ export default function App() {
   useEffect(() => {
     if (!isLoaded || !gameStarted) return;
     
+    // FIX: 保存前确保cash不是NaN
+    const currentCashSafe = safeNum(cash, 0);
+
     const saveData = {
       version: '1.0',
       timestamp: Date.now(),
@@ -232,7 +244,7 @@ export default function App() {
         generation, familyLog, legacy, unlockedAchievements, collections
       },
       current: {
-        cash, health, day, location, inventory, rank, skills,
+        cash: currentCashSafe, health, day, location, inventory, rank, skills,
         cities, beauties, relationships, myProperties, myIndustries,
         marketPrices, stockMarket, activeTalent, logs: logs.slice(-20) 
       }
@@ -343,16 +355,17 @@ export default function App() {
 
     let startCash = Math.floor(Math.random() * 1000) + 800; 
     if (legacy) {
-      startCash += Math.floor(legacy.cash * 0.7); 
-      addLog(`继承了祖上 ${Math.floor(legacy.cash * 0.7)} 两遗产。`);
+      // FIX: 继承时确保数值安全
+      startCash += Math.floor(safeNum(legacy.cash) * 0.7); 
+      addLog(`继承了祖上 ${Math.floor(safeNum(legacy.cash) * 0.7)} 两遗产。`);
     }
     if (selectedTalent?.type === 'cash') startCash += selectedTalent.val;
     setCash(startCash);
 
     const initSkills = { weaving: 0, tea_art: 0, smithing: 0, ceramics: 0, alchemy: 0 };
     if (legacy) {
-      Object.keys(legacy.skills).forEach(k => {
-        initSkills[k] = Math.floor(legacy.skills[k] * 0.5); 
+      Object.keys(legacy.skills || {}).forEach(k => {
+        initSkills[k] = Math.floor(safeNum(legacy.skills[k]) * 0.5); 
       });
       addLog('继承了家族流传的技艺经验。');
     }
@@ -430,7 +443,8 @@ export default function App() {
       const cost = Math.round(baseCost * daysPass * discount);
       if (cash < cost) return showModal('bad', '没钱', '路费不够');
       
-      setCash(c => c - cost);
+      // FIX: 确保数值安全
+      setCash(c => safeNum(c) - safeNum(cost));
       setLocation(targetCityId);
       healthChange = -5 * daysPass;
       if (['大暑', '冬至', '大寒'].includes(currentTerm.name)) healthChange *= 2;
@@ -452,7 +466,8 @@ export default function App() {
     });
     if (propIncome > 0) {
       const finalIncome = Math.floor(propIncome * incomeBuff);
-      setCash(c => c + finalIncome);
+      // FIX: 确保数值安全
+      setCash(c => safeNum(c) + safeNum(finalIncome));
       dailyLog.push(`房产收益 +${finalIncome}`);
     }
 
@@ -478,7 +493,8 @@ export default function App() {
     if (cash < recipe.cost) return showModal('bad', '缺钱', '加工费不足');
 
     const successRate = 0.5 + (skills[recipeId] * 0.005) + (activeTalent?.type==='clever' ? 0.2 : 0);
-    setCash(c => c - recipe.cost);
+    // FIX: 确保数值安全
+    setCash(c => safeNum(c) - safeNum(recipe.cost));
     setInventory(prev => ({...prev, [recipe.mat]: prev[recipe.mat] - 1}));
 
     if (Math.random() < successRate) {
@@ -497,7 +513,8 @@ export default function App() {
     
     if (action === 'visit') {
       if (cash < 100) return showModal('bad', '囊中羞涩', '拜访需要带点礼物(100两)');
-      setCash(prev => prev - 100);
+      // FIX: 确保数值安全
+      setCash(prev => safeNum(prev) - 100);
       setRelationships(prev => ({
         ...prev, 
         [id]: { ...rel, unlocked: true, exp: rel.exp + 10 }
@@ -591,13 +608,14 @@ export default function App() {
   const confirmTrade = () => {
     if (!tradeModal) return;
     const { good, type, price, amount } = tradeModal;
-    const total = price * amount;
+    // FIX: 确保交易数值安全
+    const total = safeNum(price) * safeNum(amount);
 
     if (type === 'buy') {
-      setCash(c => c - total);
+      setCash(c => safeNum(c) - total);
       setInventory(prev => ({...prev, [good.id]: (prev[good.id] || 0) + amount}));
     } else {
-      setCash(c => c + total);
+      setCash(c => safeNum(c) + total);
       setInventory(prev => ({...prev, [good.id]: prev[good.id] - amount}));
     }
     setTradeModal(null);
@@ -680,7 +698,7 @@ export default function App() {
           </div>
         </div>
         <div className="flex justify-between px-2">
-          <div className="text-center"><div className="text-xs opacity-70">银两</div><div className="text-xl font-mono font-bold">{cash}</div></div>
+          <div className="text-center"><div className="text-xs opacity-70">银两</div><div className="text-xl font-mono font-bold">{safeNum(cash)}</div></div>
           <div className="text-center"><div className="text-xs opacity-70">健康</div><div className="text-xl font-bold">{health}</div></div>
           <div className="text-center"><div className="text-xs opacity-70">总资产</div><div className="text-xl font-bold">{calculateTotalAssets()}</div></div>
         </div>
@@ -744,7 +762,7 @@ export default function App() {
                     ) : (
                       <button onClick={()=>{
                         if(cash<ind.cost) return showModal('bad','缺钱','买不起地契');
-                        setCash(c=>c-ind.cost);
+                        setCash(c=>safeNum(c)-ind.cost);
                         setMyIndustries(prev=>[...prev, {id:ind.id, count:1, progress:0}]);
                       }} className="text-xs bg-stone-800 text-white px-3 py-1.5 rounded">购买 {ind.cost}</button>
                     )}
@@ -879,7 +897,7 @@ export default function App() {
                     {owned ? <span className="text-green-600 font-bold">已购</span> : 
                       <button onClick={()=>{
                         if(cash<p.cost) return showModal('bad','穷','');
-                        setCash(c=>c-p.cost); setMyProperties(prev=>[...prev,{id:p.id, count:1}]);
+                        setCash(c=>safeNum(c)-p.cost); setMyProperties(prev=>[...prev,{id:p.id, count:1}]);
                       }} className="bg-stone-800 text-white px-2 py-1 rounded text-xs">买 {p.cost}</button>
                     }
                   </div>
@@ -910,7 +928,7 @@ export default function App() {
       </nav>
 
       {modal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={()=>setModal(null)}>
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/50 p-6" onClick={()=>setModal(null)}>
           <div className="bg-white rounded-xl p-6 w-full max-w-sm text-center" onClick={e=>e.stopPropagation()}>
             <h3 className="text-lg font-bold mb-2">{modal.title}</h3>
             <p className="text-sm text-stone-600 mb-4 whitespace-pre-wrap">{modal.desc}</p>
