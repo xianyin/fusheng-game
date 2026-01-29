@@ -6,7 +6,7 @@ import {
   AlertCircle, Heart, Gift, X, Trophy, CloudLightning, Sun, Umbrella, 
   Zap, Info, RefreshCw, Backpack, Crown, Hammer, Snowflake, Flower, 
   Leaf, UserPlus, Star, Scroll, Anchor, Sprout, Factory, Baby, 
-  Save, Download, Upload, Trash2, Moon, BookOpen, Skull
+  Save, Download, Upload, Trash2, Moon, BookOpen, Skull, Settings, Users, LogOut
 } from 'lucide-react';
 
 // --- 1. 核心常量定义 ---
@@ -615,7 +615,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-stone-900 text-amber-50 flex flex-col items-center justify-center p-6 relative">
         <button onClick={()=>setShowSystem(true)} className="absolute top-4 right-4 p-2 bg-stone-800 rounded-full hover:bg-stone-700 border border-stone-600">
-            <Save size={20} />
+            <Settings size={20} />
         </button>
 
         <h1 className="text-4xl font-bold mb-2 text-amber-500">第 {generation} 世 轮回</h1>
@@ -675,7 +675,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex gap-2">
-             <button onClick={() => setShowSystem(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><Save size={20}/></button>
+             <button onClick={() => setShowSystem(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><Settings size={20}/></button>
              <button onClick={() => setShowBag(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><Backpack size={20}/></button>
           </div>
         </div>
@@ -982,40 +982,82 @@ export default function App() {
   );
 }
 
-// 独立的系统设置组件
+// 独立的系统设置组件 (Refined UI)
 function SystemModal({ onClose, onExport, onImport, onReset, importText, setImportText }) {
   const [resetConfirm, setResetConfirm] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+
+  if (showQR) {
+    return (
+      <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-6" onClick={() => setShowQR(false)}>
+        <div className="relative bg-white p-4 rounded-xl" onClick={e => e.stopPropagation()}>
+          <button onClick={() => setShowQR(false)} className="absolute -top-3 -right-3 bg-white rounded-full p-1 shadow-lg text-stone-500"><X size={20}/></button>
+          <img src="./wechat.png" alt="群聊二维码" className="w-64 h-auto rounded-lg"/>
+          <p className="text-center text-stone-500 mt-2 text-sm">长按识别二维码加入群聊</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="bg-stone-900 text-amber-50 w-full max-w-sm rounded-xl p-6 border border-stone-700" onClick={e=>e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold flex items-center gap-2"><Save className="text-amber-500"/> 游戏系统</h2>
-          <button onClick={onClose}><X/></button>
+      <div className="bg-[#f0f2f5] text-stone-800 w-full max-w-sm rounded-xl overflow-hidden shadow-2xl" onClick={e=>e.stopPropagation()}>
+        
+        {/* Header */}
+        <div className="bg-white p-4 flex justify-between items-center border-b border-stone-200">
+          <h2 className="text-lg font-bold flex items-center gap-2">设置</h2>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-600"><X/></button>
         </div>
 
-        <div className="space-y-4">
-          <div className="p-4 bg-stone-800 rounded-lg">
-            <h3 className="text-sm font-bold text-stone-400 mb-2">导出存档</h3>
-            <button onClick={onExport} className="w-full py-2 bg-amber-700 hover:bg-amber-600 rounded flex items-center justify-center gap-2 text-sm font-bold">
-              <Download size={16}/> 复制通关文牒 (存档码)
-            </button>
+        {/* Content */}
+        <div className="p-4 space-y-4">
+          
+          {/* Warning Banner */}
+          <div className="bg-red-50 border border-red-100 text-red-700 p-3 rounded-lg text-xs">
+            <p className="font-bold mb-1">升级游戏数据存储</p>
+            请先备份游戏存档，再开始数据迁移，以保持游戏运行流畅。
           </div>
 
-          <div className="p-4 bg-stone-800 rounded-lg">
-            <h3 className="text-sm font-bold text-stone-400 mb-2">导入存档</h3>
-            <textarea 
-              value={importText}
-              onChange={(e)=>setImportText(e.target.value)}
-              placeholder="在此粘贴存档码..."
-              className="w-full bg-stone-900 border border-stone-700 rounded p-2 text-xs mb-2 h-20 text-stone-300"
-            />
-            <button onClick={onImport} className="w-full py-2 bg-blue-700 hover:bg-blue-600 rounded flex items-center justify-center gap-2 text-sm font-bold">
-              <Upload size={16}/> 读取进度
-            </button>
+          {/* Group Chat Entry */}
+          <div 
+            className="bg-white p-4 rounded-lg shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition-transform"
+            onClick={() => setShowQR(true)}
+          >
+            <div>
+              <div className="font-bold text-stone-800">群聊入口</div>
+              <div className="text-xs text-stone-500">点击查看群二维码。</div>
+            </div>
+            <Users className="text-stone-400" size={24} />
           </div>
 
-          <div className="pt-4 border-t border-stone-700">
+          {/* Import/Export Section */}
+          <div className="space-y-3">
+            <button 
+              onClick={onExport} 
+              className="w-full py-3 bg-[#4caf50] hover:bg-[#43a047] text-white rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-sm active:scale-95 transition-transform"
+            >
+              <Download size={18}/> 保存进度
+            </button>
+
+            {/* Import Text Area (Hidden by default or simplified) - Keeping textarea for functionality */}
+            <div className="bg-white p-3 rounded-lg shadow-sm">
+                <textarea 
+                value={importText}
+                onChange={(e)=>setImportText(e.target.value)}
+                placeholder="在此粘贴存档码以读取..."
+                className="w-full bg-stone-50 border-none resize-none focus:ring-0 text-xs h-16 text-stone-600 p-2 rounded mb-2"
+                />
+                <button 
+                onClick={onImport} 
+                className="w-full py-3 bg-[#2196f3] hover:bg-[#1e88e5] text-white rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-sm active:scale-95 transition-transform"
+                >
+                <Upload size={18}/> 读取进度
+                </button>
+            </div>
+          </div>
+
+          {/* Reset Section */}
+          <div className="pt-2">
             <button 
               onClick={() => {
                 if (resetConfirm) {
@@ -1025,9 +1067,10 @@ function SystemModal({ onClose, onExport, onImport, onReset, importText, setImpo
                   setTimeout(() => setResetConfirm(false), 3000);
                 }
               }} 
-              className={`w-full py-2 border ${resetConfirm ? 'bg-red-600 text-white border-red-600' : 'border-red-900 text-red-500 hover:bg-red-900/20'} rounded flex items-center justify-center gap-2 text-sm transition-all`}
+              className={`w-full py-3 border ${resetConfirm ? 'bg-red-50 text-red-600 border-red-200' : 'bg-transparent border-transparent text-stone-400'} rounded-lg flex items-center justify-center gap-2 text-sm transition-all hover:bg-stone-100`}
             >
-              <Trash2 size={16}/> {resetConfirm ? '再次点击确认删除所有存档' : '重新开启人生 (删档)'}
+              {resetConfirm ? <Trash2 size={16}/> : <LogOut size={16}/>}
+              {resetConfirm ? '再次点击确认删除所有存档' : '重新开启人生'}
             </button>
           </div>
         </div>
