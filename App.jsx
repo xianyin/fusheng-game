@@ -6,11 +6,11 @@ import {
   AlertCircle, Heart, Gift, X, Trophy, CloudLightning, Sun, Umbrella, 
   Zap, Info, RefreshCw, Backpack, Crown, Hammer, Snowflake, Flower, 
   Leaf, UserPlus, Star, Scroll, Anchor, Sprout, Factory, Baby, 
-  Save, Download, Upload, Trash2, Moon, BookOpen, Skull, Settings, Users, LogOut
+  Save, Download, Upload, Trash2, Moon, BookOpen, Skull, Settings, Users, LogOut,
+  ArrowUp, ArrowDown, Minus, Briefcase
 } from 'lucide-react';
 
-// --- 0. 基础工具函数 (修复Bug的关键) ---
-// 强制将任何值转换为有效数字，如果是 NaN/undefined/null 则返回默认值
+// --- 0. 基础工具函数 ---
 const safeNum = (val, defaultVal = 0) => {
   const num = Number(val);
   return Number.isFinite(num) ? num : defaultVal;
@@ -106,38 +106,32 @@ const CITY_POOL = [
 ];
 
 const BEAUTY_POOL = [
-  { id: 'yun', name: '芸娘', title: '青梅竹马', desc: '情深义重，布衣菜饭。', buffDesc: '每次休整额外恢复10点健康', buffType: 'health_support', keywords: 'gentle wife' },
-  { id: 'su', name: '苏小小', title: '钱塘名妓', desc: '妾乘油壁车，郎骑青骢马。', buffDesc: '房产收益增加20%', buffType: 'income_boost', buffValue: 0.2, keywords: 'courtesan elegant' },
-  { id: 'dong', name: '董小宛', title: '秦淮八艳', desc: '针神曲圣，食谱传世。', buffDesc: '行囊容量增加50', buffType: 'inventory_boost', buffValue: 50, keywords: 'chef virtuous' },
+  { id: 'yun', name: '芸娘', title: '青梅竹马', desc: '情深义重，布衣菜饭。', buffDesc: '每次休整额外恢复10点健康', buffType: 'health_support', keywords: 'gentle wife', img: 'meinv1.jpg' },
+  { id: 'su', name: '苏小小', title: '钱塘名妓', desc: '妾乘油壁车，郎骑青骢马。', buffDesc: '房产收益增加20%', buffType: 'income_boost', buffValue: 0.2, keywords: 'courtesan elegant', img: 'meinv2.jpg' },
+  { id: 'dong', name: '董小宛', title: '秦淮八艳', desc: '针神曲圣，食谱传世。', buffDesc: '行囊容量增加50', buffType: 'inventory_boost', buffValue: 50, keywords: 'chef virtuous', img: 'meinv3.jpg' },
 ];
 
-// --- 2. 辅助函数 ---
-
 const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5);
-const getAvatarUrl = (beauty) => `https://image.pollinations.ai/prompt/${encodeURIComponent(`portrait of a beautiful ancient chinese girl named ${beauty.name}, ${beauty.keywords}, traditional hanfu, digital painting, soft lighting`)}?width=100&height=100&nologo=true`;
+const getAvatarUrl = (beauty) => {
+  if (beauty.img) return beauty.img;
+  return `https://image.pollinations.ai/prompt/${encodeURIComponent(`portrait of a beautiful ancient chinese girl named ${beauty.name}, ${beauty.keywords}, traditional hanfu, digital painting, soft lighting`)}?width=100&height=100&nologo=true`;
+};
 
 const MAX_DAYS = 365;
 const BASE_INVENTORY_CAPACITY = 100;
 const SAVE_KEY = 'FUSHENG_GAME_SAVE_V1';
 
 export default function App() {
-  // --- 状态管理 ---
-  
-  // 家族/传承/永续状态
   const [generation, setGeneration] = useState(1);
   const [familyLog, setFamilyLog] = useState([]); 
   const [legacy, setLegacy] = useState(null); 
   const [collections, setCollections] = useState([]); 
   const [activeTalent, setActiveTalent] = useState(null);
-  
-  // 当前世状态
   const [gameStarted, setGameStarted] = useState(false);
   const [showInheritUI, setShowInheritUI] = useState(false); 
   const [isLoaded, setIsLoaded] = useState(false); 
-  
   const [cities, setCities] = useState([]);
   const [beauties, setBeauties] = useState([]);
-  
   const [cash, setCash] = useState(1000);
   const [health, setHealth] = useState(100);
   const [day, setDay] = useState(1);
@@ -145,16 +139,14 @@ export default function App() {
   const [inventory, setInventory] = useState({});
   const [rank, setRank] = useState(0); 
   const [skills, setSkills] = useState({ weaving: 0, tea_art: 0, smithing: 0, ceramics: 0, alchemy: 0 });
-  
   const [marketPrices, setMarketPrices] = useState({});
   const [stockMarket, setStockMarket] = useState([]); 
   const [myProperties, setMyProperties] = useState([]); 
   const [myIndustries, setMyIndustries] = useState([]); 
-  
   const [relationships, setRelationships] = useState({});
   const [unlockedAchievements, setUnlockedAchievements] = useState([]);
+  const [marketTrend, setMarketTrend] = useState(null); // Add missing state for market trend
 
-  // UI
   const [activeTab, setActiveTab] = useState('market');
   const [logs, setLogs] = useState([]);
   const [modal, setModal] = useState(null);
@@ -163,8 +155,6 @@ export default function App() {
   const [importText, setImportText] = useState("");
   const [tradeModal, setTradeModal] = useState(null); 
   const logsEndRef = useRef(null);
-
-  // --- 1. 存档/读档系统 ---
 
   useEffect(() => {
     const loadGame = () => {
@@ -179,11 +169,9 @@ export default function App() {
           setUnlockedAchievements(data.global.unlockedAchievements || []);
           
           if (data.current) {
-            // FIX: 在读取时如果发现是NaN，强制重置
             setCash(safeNum(data.current.cash, 1000));
             setHealth(safeNum(data.current.health, 100));
             setDay(safeNum(data.current.day, 1));
-            
             setLocation(data.current.location);
             setInventory(data.current.inventory || {});
             setRank(data.current.rank || 0);
@@ -233,10 +221,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isLoaded || !gameStarted) return;
-    
-    // FIX: 保存前确保cash不是NaN
     const currentCashSafe = safeNum(cash, 0);
-
     const saveData = {
       version: '1.0',
       timestamp: Date.now(),
@@ -252,25 +237,19 @@ export default function App() {
     localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
   }, [day, cash, inventory, rank, skills, generation, relationships, isLoaded, gameStarted]);
 
-  // 导出存档
   const exportSave = () => {
     const data = localStorage.getItem(SAVE_KEY);
     if (!data) return showModal('bad', '无存档', '尚无游戏记录');
-    
     try {
       const encoded = btoa(unescape(encodeURIComponent(data))); 
-      
       const textArea = document.createElement("textarea");
       textArea.value = encoded;
-      
       textArea.style.position = "fixed";
       textArea.style.left = "-9999px";
       textArea.style.top = "0";
       document.body.appendChild(textArea);
-      
       textArea.focus();
       textArea.select();
-      
       try {
         const successful = document.execCommand('copy');
         if (successful) {
@@ -279,19 +258,14 @@ export default function App() {
           throw new Error('Copy command failed');
         }
       } catch (err) {
-        console.error('Fallback: Oops, unable to copy', err);
         showModal('bad', '复制失败', '请手动复制以下存档码：\n' + encoded.substring(0, 20) + '...');
       }
-      
       document.body.removeChild(textArea);
-      
     } catch (e) {
-      console.error(e);
       showModal('bad', '导出失败', '无法生成存档码');
     }
   };
 
-  // 导入存档
   const importSave = () => {
     if (!importText) return;
     try {
@@ -305,28 +279,22 @@ export default function App() {
     }
   };
 
-  // 重置游戏 (Hard Reset)
   const hardReset = () => {
     localStorage.removeItem(SAVE_KEY);
     window.location.reload();
   };
 
-  // --- 滚动日志 ---
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
-
-  // --- 核心逻辑 ---
 
   const addLog = (msg) => {
     setLogs(prev => [...prev, `[第${day}日] ${msg}`]);
   };
 
-  // --- 世代挑战 ---
   useEffect(() => {
     if (!gameStarted) return;
     const currentGoal = GENERATION_GOALS.find(g => g.gen === generation) || GENERATION_GOALS[GENERATION_GOALS.length - 1];
-    
     const stateSnapshot = {
       day, assets: calculateTotalAssets(), 
       props: myProperties.length + myIndustries.length,
@@ -334,7 +302,6 @@ export default function App() {
       rank, cities: 4, 
       masterSkills: Object.values(skills).filter(v => v >= 100).length
     };
-    
     if (currentGoal.check(stateSnapshot) && !unlockedAchievements.includes(`gen_${generation}`)) {
       setUnlockedAchievements(prev => [...prev, `gen_${generation}`]);
       showModal('good', '达成人生目标', `恭喜完成【${currentGoal.title}】！\n获得传家宝：${currentGoal.reward}`);
@@ -355,7 +322,6 @@ export default function App() {
 
     let startCash = Math.floor(Math.random() * 1000) + 800; 
     if (legacy) {
-      // FIX: 继承时确保数值安全
       startCash += Math.floor(safeNum(legacy.cash) * 0.7); 
       addLog(`继承了祖上 ${Math.floor(safeNum(legacy.cash) * 0.7)} 两遗产。`);
     }
@@ -403,7 +369,13 @@ export default function App() {
         if (term.name === '寒露' && good.id === 'silk') base *= 1.3;
         if (term.name === '大寒' && (good.id === 'wine' || good.id === 'rice')) base *= 1.5;
 
-        let price = Math.round(base * (1 + (Math.random() - 0.5) * 2 * good.volatility));
+        // Market trend logic can be added here if needed, keeping simple random for now
+        let trendMult = 1;
+        if (marketTrend && marketTrend.targetGoodsId === good.id) {
+             trendMult = marketTrend.multiplier;
+        }
+
+        let price = Math.round(base * (1 + (Math.random() - 0.5) * 2 * good.volatility) * trendMult);
         if (rank >= 3 && Math.random() < 0.2) price = Math.round(price * 1.4);
         
         cityPrices[good.id] = Math.max(1, price);
@@ -418,6 +390,19 @@ export default function App() {
     const termIdx = Math.floor((newDay % 365) / 15) % 24;
     const currentTerm = SOLAR_TERMS[termIdx];
     let dailyLog = [];
+
+    // Market trend update
+    if (newDay % 3 === 0 && Math.random() < 0.2) {
+         const targetGood = GOODS_POOL[Math.floor(Math.random() * GOODS_POOL.length)];
+         const isBoom = Math.random() > 0.5;
+         setMarketTrend({
+             targetGoodsId: targetGood.id,
+             multiplier: isBoom ? 1.5 : 0.6,
+             effectDesc: isBoom ? `${targetGood.name}价格飞涨！` : `${targetGood.name}价格暴跌！`
+         });
+    } else if (newDay % 3 === 0) {
+        setMarketTrend(null);
+    }
 
     const newIndustries = myIndustries.map(ind => {
       const def = INDUSTRIES.find(i => i.id === ind.id);
@@ -443,7 +428,6 @@ export default function App() {
       const cost = Math.round(baseCost * daysPass * discount);
       if (cash < cost) return showModal('bad', '没钱', '路费不够');
       
-      // FIX: 确保数值安全
       setCash(c => safeNum(c) - safeNum(cost));
       setLocation(targetCityId);
       healthChange = -5 * daysPass;
@@ -466,7 +450,6 @@ export default function App() {
     });
     if (propIncome > 0) {
       const finalIncome = Math.floor(propIncome * incomeBuff);
-      // FIX: 确保数值安全
       setCash(c => safeNum(c) + safeNum(finalIncome));
       dailyLog.push(`房产收益 +${finalIncome}`);
     }
@@ -493,7 +476,6 @@ export default function App() {
     if (cash < recipe.cost) return showModal('bad', '缺钱', '加工费不足');
 
     const successRate = 0.5 + (skills[recipeId] * 0.005) + (activeTalent?.type==='clever' ? 0.2 : 0);
-    // FIX: 确保数值安全
     setCash(c => safeNum(c) - safeNum(recipe.cost));
     setInventory(prev => ({...prev, [recipe.mat]: prev[recipe.mat] - 1}));
 
@@ -513,7 +495,6 @@ export default function App() {
     
     if (action === 'visit') {
       if (cash < 100) return showModal('bad', '囊中羞涩', '拜访需要带点礼物(100两)');
-      // FIX: 确保数值安全
       setCash(prev => safeNum(prev) - 100);
       setRelationships(prev => ({
         ...prev, 
@@ -608,7 +589,6 @@ export default function App() {
   const confirmTrade = () => {
     if (!tradeModal) return;
     const { good, type, price, amount } = tradeModal;
-    // FIX: 确保交易数值安全
     const total = safeNum(price) * safeNum(amount);
 
     if (type === 'buy') {
@@ -636,10 +616,10 @@ export default function App() {
             <Settings size={20} />
         </button>
 
-        <h1 className="text-4xl font-bold mb-2 text-amber-500">第 {generation} 世 轮回</h1>
+        <h1 className="text-4xl font-bold mb-2 text-amber-500 font-serif">第 {generation} 世 轮回</h1>
         <p className="text-stone-400 mb-8">先祖积累：银两 {Math.floor(legacy ? legacy.cash * 0.7 : 0)} | 技艺传承</p>
         
-        <h3 className="text-xl mb-4 flex items-center gap-2"><Star className="text-yellow-400"/> 请选择本世天赋</h3>
+        <h3 className="text-xl mb-4 flex items-center gap-2 text-amber-200"><Star className="text-yellow-400"/> 请选择本世天赋</h3>
         <div className="grid gap-4 w-full max-w-sm">
           {TALENTS.sort(() => 0.5 - Math.random()).slice(0, 3).map(talent => (
             <button 
@@ -678,62 +658,94 @@ export default function App() {
   const currentTerm = SOLAR_TERMS[termIdx];
 
   return (
-    <div className="h-screen bg-[#fffcf5] text-stone-800 font-sans flex flex-col max-w-md mx-auto shadow-2xl relative overflow-hidden">
-      <div className="bg-orange-700 text-white p-4 pb-4 shadow-lg z-10 shrink-0">
+    <div className="h-screen bg-[#fdfbf7] text-stone-800 font-sans flex flex-col max-w-md mx-auto shadow-2xl relative overflow-hidden">
+      
+      {/* 装饰边角 */}
+      <div className="absolute top-0 left-0 w-16 h-16 pointer-events-none opacity-50 z-20" style={{backgroundImage: 'radial-gradient(circle at top left, #e6d0a3 10%, transparent 70%)'}}></div>
+      <div className="absolute top-0 right-0 w-16 h-16 pointer-events-none opacity-50 z-20" style={{backgroundImage: 'radial-gradient(circle at top right, #e6d0a3 10%, transparent 70%)'}}></div>
+
+      {/* 顶部 */}
+      <div className="bg-[#5c3a21] text-[#f8e8c8] p-4 pb-4 shadow-lg z-10 shrink-0 border-b-2 border-[#8b5a3b]" style={{backgroundImage: 'linear-gradient(45deg, #5c3a21 25%, #6b442a 25%, #6b442a 50%, #5c3a21 50%, #5c3a21 75%, #6b442a 75%, #6b442a 100%)', backgroundSize: '20px 20px', backgroundOpacity: 0.1}}>
         <div className="flex justify-between items-start mb-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold">牛牛家族</h1>
-              <span className="text-xs bg-black/20 px-2 py-0.5 rounded border border-white/20">第{generation}代</span>
+              <h1 className="text-xl font-bold font-serif tracking-widest text-[#f8e8c8]">牛牛家族</h1>
+              <span className="text-[10px] bg-[#3e2716] px-2 py-0.5 rounded border border-[#8b5a3b] text-[#d4b996]">第{generation}代</span>
             </div>
-            <div className="text-xs text-orange-200 mt-1 flex gap-2 items-center">
-              <span className="bg-white/10 px-1 rounded">{RANKS[rank].title}</span>
+            <div className="text-xs text-[#d4b996] mt-1 flex gap-2 items-center font-serif">
+              <span className="bg-[#3e2716]/50 px-1 rounded">{RANKS[rank].title}</span>
               <span>{day}天</span>
               <span>{currentTerm.name} ({SEASONS[Math.floor(termIdx/6)]})</span>
             </div>
           </div>
           <div className="flex gap-2">
-             <button onClick={() => setShowSystem(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><Settings size={20}/></button>
-             <button onClick={() => setShowBag(true)} className="p-2 bg-white/10 rounded-full hover:bg-white/20"><Backpack size={20}/></button>
+             <button onClick={() => setShowSystem(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><Settings size={18}/></button>
+             <button onClick={() => setShowBag(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><Backpack size={18}/></button>
           </div>
         </div>
-        <div className="flex justify-between px-2">
-          <div className="text-center"><div className="text-xs opacity-70">银两</div><div className="text-xl font-mono font-bold">{safeNum(cash)}</div></div>
-          <div className="text-center"><div className="text-xs opacity-70">健康</div><div className="text-xl font-bold">{health}</div></div>
-          <div className="text-center"><div className="text-xs opacity-70">总资产</div><div className="text-xl font-bold">{calculateTotalAssets()}</div></div>
+        <div className="flex justify-between px-2 text-[#f8e8c8]">
+          <div className="text-center flex flex-col items-center">
+            <div className="text-[10px] opacity-70 mb-1 flex items-center gap-1"><Coins size={12}/> 银两</div>
+            <div className="text-lg font-serif font-bold">{safeNum(cash)}</div>
+          </div>
+          <div className="text-center flex flex-col items-center">
+            <div className="text-[10px] opacity-70 mb-1 flex items-center gap-1"><Heart size={12}/> 健康</div>
+            <div className="text-lg font-serif font-bold">{health}</div>
+          </div>
+          <div className="text-center flex flex-col items-center">
+            <div className="text-[10px] opacity-70 mb-1 flex items-center gap-1"><Crown size={12}/> 总资产</div>
+            <div className="text-lg font-serif font-bold">{calculateTotalAssets()}</div>
+          </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fffcf5]">
+      {/* 内容区域 */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#fdfbf7]">
         
+        {/* 市场 */}
         {activeTab === 'market' && (
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
-            <h2 className="font-bold mb-3 flex items-center text-stone-700"><ShoppingBag className="mr-2 text-orange-600" size={18}/> {currentCityData.name}集市</h2>
-            <div className="space-y-2">
+          <div className="bg-[#fdfbf7] p-4 rounded-xl shadow-sm border border-[#e6d0a3]">
+            <h2 className="font-bold mb-3 flex items-center text-[#5c3a21] font-serif border-b border-[#e6d0a3] pb-2">
+              <ShoppingBag className="mr-2 text-[#8b5a3b]" size={18}/> {currentCityData.name}集市
+            </h2>
+            <div className="space-y-3">
               {GOODS_POOL.filter(g => g.type !== 'raw' || !g.producedBy).map(good => { 
                 const price = marketPrices[location]?.[good.id];
+                // 简单的价格趋势模拟 (实际项目中应记录历史价格)
+                const trend = price > good.basePrice ? 'up' : price < good.basePrice ? 'down' : 'flat';
+                
                 return (
-                  <div key={good.id} className="flex justify-between items-center bg-stone-50 p-2 rounded">
+                  <div key={good.id} className="flex justify-between items-center bg-[#fff] p-3 rounded-lg border border-[#f0e4d0] shadow-sm">
                     <div>
-                      <div className="font-bold text-sm">{good.name}</div>
-                      <div className="text-xs text-stone-500">市价: <span className="text-orange-600">{price||'-'}</span></div>
+                      <div className="font-bold text-[#5c3a21] text-sm">{good.name}</div>
+                      <div className="text-xs text-stone-400 mt-1 flex items-center gap-1">
+                        市价 
+                        <span className={`font-mono text-sm font-bold ${trend === 'up' ? 'text-red-600' : trend === 'down' ? 'text-green-600' : 'text-stone-600'}`}>
+                          {price||'-'}
+                        </span>
+                        {trend === 'up' && <ArrowUp size={10} className="text-red-500"/>}
+                        {trend === 'down' && <ArrowDown size={10} className="text-green-500"/>}
+                        {trend === 'flat' && <Minus size={10} className="text-stone-300"/>}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs w-6 text-center">{inventory[good.id]||0}</span>
-                      <button 
-                        onClick={() => openTradeModal(good.id, 'sell', price)}
-                        disabled={!price || !inventory[good.id]}
-                        className="w-8 h-8 bg-stone-200 rounded font-bold text-stone-600 disabled:opacity-30"
-                      >
-                        -
-                      </button>
-                      <button 
-                        onClick={() => openTradeModal(good.id, 'buy', price)}
-                        disabled={!price}
-                        className="w-8 h-8 bg-orange-600 rounded font-bold text-white disabled:opacity-30"
-                      >
-                        +
-                      </button>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-[#8b5a3b] bg-[#f8f4eb] px-2 py-0.5 rounded">持: {inventory[good.id]||0}</span>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => openTradeModal(good.id, 'sell', price)}
+                          disabled={!price || !inventory[good.id]}
+                          className="px-3 py-1 bg-[#f0e4d0] text-[#5c3a21] text-xs rounded hover:bg-[#e6d0a3] disabled:opacity-30 shadow-sm active:translate-y-0.5 transition-all font-serif"
+                        >
+                          售出
+                        </button>
+                        <button 
+                          onClick={() => openTradeModal(good.id, 'buy', price)}
+                          disabled={!price}
+                          className="px-3 py-1 bg-[#8b5a3b] text-[#f8e8c8] text-xs rounded hover:bg-[#6b442a] disabled:opacity-30 shadow-sm active:translate-y-0.5 transition-all font-serif"
+                        >
+                          购入
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -742,73 +754,79 @@ export default function App() {
           </div>
         )}
 
+        {/* 产业 */}
         {activeTab === 'industry' && (
           <div className="space-y-4">
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
-              <h2 className="font-bold mb-3 flex items-center text-stone-700"><Sprout className="mr-2 text-green-600" size={18}/> 家族产业</h2>
+            <div className="bg-[#fdfbf7] p-4 rounded-xl shadow-sm border border-[#e6d0a3]">
+              <h2 className="font-bold mb-3 flex items-center text-[#5c3a21] font-serif border-b border-[#e6d0a3] pb-2"><Sprout className="mr-2 text-green-700" size={18}/> 家族产业</h2>
               {INDUSTRIES.map(ind => {
                 const owned = myIndustries.find(i => i.id === ind.id);
                 return (
-                  <div key={ind.id} className="flex justify-between items-center mb-3 pb-3 border-b border-stone-50 last:border-0 last:pb-0">
+                  <div key={ind.id} className="flex justify-between items-center mb-3 pb-3 border-b border-[#f0e4d0] last:border-0 last:pb-0">
                     <div>
-                      <div className="font-bold text-sm">{ind.name}</div>
+                      <div className="font-bold text-sm text-[#5c3a21]">{ind.name}</div>
                       <div className="text-xs text-stone-500">{ind.desc}</div>
                     </div>
                     {owned ? (
                       <div className="text-right">
-                        <div className="text-xs font-bold text-green-600">拥有 x{owned.count}</div>
-                        <div className="text-[10px] text-stone-400">进度 {owned.progress}/{ind.rate}</div>
+                        <div className="text-xs font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded">拥有 x{owned.count}</div>
+                        <div className="text-[10px] text-stone-400 mt-1">进度 {Math.floor((owned.progress/ind.rate)*100)}%</div>
                       </div>
                     ) : (
                       <button onClick={()=>{
                         if(cash<ind.cost) return showModal('bad','缺钱','买不起地契');
                         setCash(c=>safeNum(c)-ind.cost);
                         setMyIndustries(prev=>[...prev, {id:ind.id, count:1, progress:0}]);
-                      }} className="text-xs bg-stone-800 text-white px-3 py-1.5 rounded">购买 {ind.cost}</button>
+                      }} className="text-xs bg-[#5c3a21] text-[#f8e8c8] px-3 py-1.5 rounded hover:bg-[#4e311b] shadow-sm font-serif">购买 {ind.cost}</button>
                     )}
                   </div>
                 )
               })}
             </div>
 
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
-              <h2 className="font-bold mb-3 flex items-center text-stone-700"><Factory className="mr-2 text-blue-600" size={18}/> 技艺工坊</h2>
+            <div className="bg-[#fdfbf7] p-4 rounded-xl shadow-sm border border-[#e6d0a3]">
+              <h2 className="font-bold mb-3 flex items-center text-[#5c3a21] font-serif border-b border-[#e6d0a3] pb-2"><Factory className="mr-2 text-blue-700" size={18}/> 技艺工坊</h2>
               <div className="flex gap-2 mb-3 overflow-x-auto text-[10px] pb-1">
                 {Object.entries(skills).map(([k,v]) => (
-                  <span key={k} className="bg-blue-50 text-blue-600 px-2 py-1 rounded whitespace-nowrap">{RECIPES.find(r=>r.id===k)?.name.slice(0,2) || k}:{v}</span>
+                  <span key={k} className="bg-blue-50 text-blue-700 px-2 py-1 rounded whitespace-nowrap border border-blue-100">{RECIPES.find(r=>r.id===k)?.name.slice(0,2) || k}:{v}</span>
                 ))}
               </div>
               {RECIPES.map(recipe => (
-                <div key={recipe.id} className="flex justify-between items-center bg-stone-50 p-2 rounded mb-2">
+                <div key={recipe.id} className="flex justify-between items-center bg-[#fff] p-2 rounded mb-2 border border-[#f0e4d0]">
                   <div className="text-xs">
-                    <span className="font-bold">{recipe.name}</span>
-                    <div className="text-stone-500 scale-90 origin-left">{GOODS_POOL.find(g=>g.id===recipe.mat)?.name} → {GOODS_POOL.find(g=>g.id===recipe.product)?.name}</div>
+                    <span className="font-bold text-[#5c3a21]">{recipe.name}</span>
+                    <div className="text-stone-500 scale-90 origin-left mt-0.5">{GOODS_POOL.find(g=>g.id===recipe.mat)?.name} → {GOODS_POOL.find(g=>g.id===recipe.product)?.name}</div>
                   </div>
-                  <button onClick={()=>craftItem(recipe.id)} className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">制造 (费用{recipe.cost})</button>
+                  <button onClick={()=>craftItem(recipe.id)} className="text-xs bg-blue-700 text-white px-3 py-1.5 rounded hover:bg-blue-800 shadow-sm font-serif">制造 (费{recipe.cost})</button>
                 </div>
               ))}
             </div>
           </div>
         )}
 
+        {/* 移动/世界 */}
         {activeTab === 'travel' && (
           <div className="space-y-3">
             {cities.map(city => {
               if (city.id === location) return null;
               return (
-                <button key={city.id} onClick={()=>advanceTime(2, city.id)} className="w-full bg-white p-3 rounded-xl flex justify-between items-center shadow-sm">
+                <button key={city.id} onClick={()=>advanceTime(2, city.id)} className="w-full bg-[#fff] p-4 rounded-xl flex justify-between items-center shadow-sm border border-[#e6d0a3] hover:bg-[#f8f4eb] transition-colors group">
                   <div className="text-left">
-                    <div className="font-bold text-sm">{city.name}</div>
-                    <div className="text-xs text-stone-500">{city.desc}</div>
+                    <div className="font-bold text-sm text-[#5c3a21] font-serif text-lg">{city.name}</div>
+                    <div className="text-xs text-stone-500 mt-1">{city.desc}</div>
                   </div>
-                  <div className="text-right text-xs font-bold text-orange-600">2天 / 160两</div>
+                  <div className="text-right text-xs">
+                    <div className="text-stone-400 group-hover:text-[#8b5a3b]">2天路程</div>
+                    <div className="font-bold text-[#8b5a3b] mt-1">耗资 160两</div>
+                  </div>
                 </button>
               )
             })}
-            <button onClick={()=>advanceTime(1)} className="w-full bg-stone-100 p-3 rounded-xl font-bold text-stone-600 flex justify-center gap-2"><Home size={18}/> 原地修整</button>
+            <button onClick={()=>advanceTime(1)} className="w-full bg-[#e6d0a3]/30 p-4 rounded-xl font-bold text-[#5c3a21] flex justify-center gap-2 hover:bg-[#e6d0a3]/50 transition-colors font-serif"><Home size={18}/> 原地修整</button>
           </div>
         )}
 
+        {/* 知己 */}
         {activeTab === 'beauties' && (
           <div className="space-y-4">
             {beauties.map(beauty => {
@@ -816,38 +834,38 @@ export default function App() {
               if (!rel) return null;
 
               return (
-                <div key={beauty.id} className="bg-white p-4 rounded-xl shadow-sm border border-stone-100 overflow-hidden relative">
+                <div key={beauty.id} className="bg-[#fdfbf7] p-4 rounded-xl shadow-sm border border-[#e6d0a3] overflow-hidden relative">
                   <div className="flex gap-4">
                     <img 
                       src={getAvatarUrl(beauty)} 
                       alt={beauty.name} 
-                      className="w-20 h-20 rounded-lg object-cover bg-stone-200 border-2 border-pink-50" 
+                      className="w-20 h-20 rounded-lg object-cover border-2 border-[#e6d0a3] shadow-sm" 
                     />
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
-                        <h3 className="font-bold text-lg text-stone-800">{beauty.name}</h3>
-                        <div className="text-xs text-pink-500 font-bold border border-pink-200 px-1 rounded">Lv.{rel.lv}</div>
+                        <h3 className="font-bold text-lg text-[#5c3a21] font-serif">{beauty.name}</h3>
+                        <div className="text-xs text-pink-600 font-bold border border-pink-200 px-2 py-0.5 rounded bg-pink-50">Lv.{rel.lv}</div>
                       </div>
-                      <p className="text-xs text-stone-500 mt-1 line-clamp-1">{beauty.desc}</p>
+                      <p className="text-xs text-stone-500 mt-1 line-clamp-1 italic">"{beauty.desc}"</p>
                       
-                      <div className="w-full bg-stone-100 h-1.5 rounded-full mt-3 mb-1">
+                      <div className="w-full bg-[#f0e4d0] h-1.5 rounded-full mt-3 mb-1">
                         <div className="bg-pink-400 h-1.5 rounded-full transition-all" style={{width: `${Math.min(100, (rel.exp / (rel.lv*50))*100)}%`}}></div>
                       </div>
-                      <div className="flex justify-between text-[10px] text-stone-400 mb-2">
+                      <div className="flex justify-between text-[10px] text-stone-400 mb-3">
                         <span>羁绊 {rel.exp}/{rel.lv*50}</span>
                         <span>特权: Lv3解锁跟随</span>
                       </div>
                       
-                      <div className="flex gap-2 mt-2">
+                      <div className="flex gap-2">
                         {!rel.unlocked ? (
-                          <button onClick={()=>interactNPC(beauty.id, 'visit')} className="flex-1 bg-stone-800 text-white text-xs py-1.5 rounded shadow active:scale-95 transition">初次拜访 (100两)</button>
+                          <button onClick={()=>interactNPC(beauty.id, 'visit')} className="flex-1 bg-[#5c3a21] text-[#f8e8c8] text-xs py-1.5 rounded shadow-sm hover:bg-[#4e311b] font-serif">初访 (100两)</button>
                         ) : (
                           <>
-                            <button onClick={()=>interactNPC(beauty.id, 'visit')} className="flex-1 border border-stone-300 text-stone-600 text-xs py-1.5 rounded hover:bg-stone-50 active:scale-95 transition">拜访</button>
+                            <button onClick={()=>interactNPC(beauty.id, 'visit')} className="flex-1 border border-[#8b5a3b] text-[#5c3a21] text-xs py-1.5 rounded hover:bg-[#f8f4eb] font-serif">拜访</button>
                             {rel.lv >= 3 && (
                               <button 
                                 onClick={()=>interactNPC(beauty.id, 'follow')} 
-                                className={`flex-1 text-xs py-1.5 rounded font-bold shadow-sm active:scale-95 transition ${rel.following ? 'bg-pink-500 text-white' : 'bg-white border border-pink-500 text-pink-500'}`}
+                                className={`flex-1 text-xs py-1.5 rounded font-bold font-serif shadow-sm ${rel.following ? 'bg-pink-500 text-white' : 'bg-white border border-pink-300 text-pink-500'}`}
                               >
                                 {rel.following ? '跟随中' : '邀请'}
                               </button>
@@ -858,7 +876,7 @@ export default function App() {
                     </div>
                   </div>
                   {rel.following && (
-                    <div className="mt-3 text-[10px] flex items-center justify-center gap-1 bg-pink-50 text-pink-600 py-1.5 rounded border border-pink-100">
+                    <div className="mt-3 text-[10px] flex items-center justify-center gap-1 bg-pink-50/50 text-pink-700 py-1.5 rounded border border-pink-100">
                       <Heart size={10} className="fill-current"/> 
                       <span>羁绊生效：{beauty.buffDesc}</span>
                     </div>
@@ -869,36 +887,46 @@ export default function App() {
           </div>
         )}
 
+        {/* 资产/身份 */}
         {activeTab === 'assets' && (
           <div className="space-y-4">
-            <div className="bg-gradient-to-br from-stone-800 to-stone-900 text-amber-50 p-4 rounded-xl shadow-lg">
-              <h2 className="text-xl font-bold text-amber-200 mb-1">{RANKS[rank].title}</h2>
-              <div className="text-xs text-stone-400 mb-3">{RANKS[rank].desc}</div>
-              <div className="bg-white/10 p-2 rounded text-xs mb-3">特权: {RANKS[rank].perk}</div>
-              {rank < 4 && (
-                <button onClick={()=>{
-                  const next = RANKS[rank+1];
-                  if(cash>=next.req.cash && myProperties.length+myIndustries.length >= next.req.cities) {
-                    setRank(r=>r+1); showModal('good','晋升',`成为${next.title}!`);
-                  } else {
-                    showModal('bad','未达标',`需银两${next.req.cash}，资产${next.req.cities}`);
-                  }
-                }} className="w-full bg-amber-600 py-2 rounded text-sm font-bold">晋升</button>
-              )}
+            <div className="bg-gradient-to-br from-[#5c3a21] to-[#3e2716] text-[#f8e8c8] p-5 rounded-xl shadow-lg relative overflow-hidden">
+              <Crown className="absolute -right-4 -bottom-4 text-white/5 w-32 h-32" />
+              <div className="relative z-10">
+                <div className="text-xs text-[#d4b996] uppercase tracking-widest mb-1 opacity-70">Current Rank</div>
+                <h2 className="text-2xl font-bold text-[#f8e8c8] mb-2 font-serif">{RANKS[rank].title}</h2>
+                <p className="text-sm text-[#d4b996] mb-4">{RANKS[rank].desc}</p>
+                <div className="bg-white/10 p-2 rounded text-xs mb-4 border border-white/10">
+                  <span className="text-[#e6d0a3] font-bold">特权：</span> {RANKS[rank].perk}
+                </div>
+                
+                {rank < 4 && (
+                  <button onClick={()=>{
+                    const next = RANKS[rank+1];
+                    if(cash>=next.req.cash && myProperties.length+myIndustries.length >= next.req.cities) {
+                      setRank(r=>r+1); showModal('good','晋升',`成为${next.title}!`);
+                    } else {
+                      showModal('bad','未达标',`需银两${next.req.cash}，资产${next.req.cities}`);
+                    }
+                  }} className="w-full bg-[#8b5a3b] hover:bg-[#6b442a] text-[#f8e8c8] py-2 rounded font-bold text-sm transition shadow-md border border-[#a67c52]">
+                    晋升下一阶
+                  </button>
+                )}
+              </div>
             </div>
             
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
-              <h3 className="font-bold text-sm mb-2">房产</h3>
+            <div className="bg-[#fdfbf7] p-4 rounded-xl shadow-sm border border-[#e6d0a3]">
+              <h3 className="font-bold text-sm mb-3 text-[#5c3a21] font-serif border-b border-[#e6d0a3] pb-2">名下房产</h3>
               {PROPERTIES.map(p => {
                 const owned = myProperties.find(mp => mp.id === p.id);
                 return (
-                  <div key={p.id} className="flex justify-between items-center mb-2 text-sm border-b border-stone-50 pb-2">
+                  <div key={p.id} className="flex justify-between items-center mb-2 text-sm border-b border-[#f0e4d0] pb-2 last:border-0">
                     <span>{p.name}</span>
-                    {owned ? <span className="text-green-600 font-bold">已购</span> : 
+                    {owned ? <span className="text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded">已购</span> : 
                       <button onClick={()=>{
                         if(cash<p.cost) return showModal('bad','穷','');
                         setCash(c=>safeNum(c)-p.cost); setMyProperties(prev=>[...prev,{id:p.id, count:1}]);
-                      }} className="bg-stone-800 text-white px-2 py-1 rounded text-xs">买 {p.cost}</button>
+                      }} className="bg-[#5c3a21] text-[#f8e8c8] px-3 py-1 rounded text-xs hover:bg-[#4e311b] font-serif">买 {p.cost}</button>
                     }
                   </div>
                 )
@@ -909,42 +937,60 @@ export default function App() {
 
       </div>
 
-      <div className="h-24 bg-stone-100 border-t border-stone-200 p-2 overflow-y-auto text-[10px] font-mono text-stone-500 shrink-0">
+      {/* 底部日志 */}
+      <div className="h-24 bg-[#e6d0a3]/20 border-t border-[#e6d0a3] p-2 overflow-y-auto text-[10px] font-mono text-[#5c3a21] shrink-0 font-serif leading-relaxed">
         {logs.slice().reverse().map((l, i) => <div key={i} className="mb-0.5">· {l}</div>)}
       </div>
 
-      <nav className="bg-white border-t border-stone-200 px-2 py-2 flex justify-between items-center text-[10px] shrink-0 pb-safe">
+      {/* 底部导航 */}
+      <nav className="bg-[#fff] border-t border-[#e6d0a3] px-2 py-2 flex justify-between items-center text-[10px] shrink-0 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         {[
           {id:'market', icon:ShoppingBag, l:'集市'},
           {id:'industry', icon:Sprout, l:'产业'},
           {id:'travel', icon:Map, l:'世界'},
           {id:'beauties', icon:Heart, l:'知己'},
-          {id:'assets', icon:Crown, l:'家族'}
+          {id:'assets', icon:Briefcase, l:'家族'}
         ].map(t => (
-          <button key={t.id} onClick={()=>setActiveTab(t.id)} className={`flex flex-col items-center p-2 w-1/5 ${activeTab===t.id?'text-orange-600 font-bold':'text-stone-400'}`}>
-            <t.icon size={20} className="mb-1"/>{t.l}
+          <button 
+            key={t.id} 
+            onClick={()=>setActiveTab(t.id)} 
+            className={`flex flex-col items-center p-2 w-1/5 transition-all duration-300 ${activeTab===t.id ? 'text-[#8b5a3b] scale-110 font-bold' : 'text-stone-400 hover:text-[#8b5a3b]/70'}`}
+          >
+            <div className={`mb-1 relative ${activeTab===t.id ? 'drop-shadow-[0_0_8px_rgba(139,90,59,0.4)]' : ''}`}>
+              <t.icon size={22} strokeWidth={activeTab===t.id?2.5:2}/>
+            </div>
+            {t.l}
           </button>
         ))}
       </nav>
 
+      {/* 弹窗们 (z-index 提高到 60) */}
       {modal && (
-        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/50 p-6" onClick={()=>setModal(null)}>
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm text-center" onClick={e=>e.stopPropagation()}>
-            <h3 className="text-lg font-bold mb-2">{modal.title}</h3>
-            <p className="text-sm text-stone-600 mb-4 whitespace-pre-wrap">{modal.desc}</p>
-            <button onClick={()=>setModal(null)} className="w-full py-2 bg-stone-800 text-white rounded-lg">好的</button>
+        <div className="absolute inset-0 z-[60] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm" onClick={()=>setModal(null)}>
+          <div className="bg-[#fffcf5] rounded-xl p-6 w-full max-w-sm text-center border-2 border-[#e6d0a3] shadow-2xl" onClick={e=>e.stopPropagation()}>
+            <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
+              modal.type === 'good' ? 'bg-yellow-100 text-yellow-600' :
+              modal.type === 'bad' ? 'bg-stone-800 text-white' : 'bg-blue-100 text-blue-600'
+            }`}>
+              {modal.type === 'good' ? <Trophy/> : modal.type === 'bad' ? <AlertCircle/> : <Info/>}
+            </div>
+            <h3 className="text-lg font-bold mb-2 text-[#5c3a21] font-serif">{modal.title}</h3>
+            <p className="text-sm text-stone-600 mb-6 whitespace-pre-wrap leading-relaxed">{modal.desc}</p>
+            <button onClick={()=>setModal(null)} className="w-full py-2.5 bg-[#5c3a21] text-[#f8e8c8] rounded-lg font-bold hover:bg-[#4e311b] active:scale-95 transition-transform">朕知道了</button>
           </div>
         </div>
       )}
       
       {showBag && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/30" onClick={()=>setShowBag(false)}>
-          <div className="bg-white w-3/4 max-h-[60vh] overflow-y-auto rounded-xl p-4" onClick={e=>e.stopPropagation()}>
-            <h3 className="font-bold border-b pb-2 mb-2">行囊</h3>
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={()=>setShowBag(false)}>
+          <div className="bg-[#fffcf5] w-3/4 max-h-[60vh] overflow-y-auto rounded-xl p-4 border-2 border-[#e6d0a3] shadow-2xl" onClick={e=>e.stopPropagation()}>
+            <h3 className="font-bold border-b border-[#e6d0a3] pb-2 mb-2 text-[#5c3a21] font-serif flex items-center gap-2">
+              <Backpack size={18}/> 行囊
+            </h3>
             {Object.entries(inventory).map(([k,v]) => v>0 && (
-              <div key={k} className="flex justify-between text-sm py-1">
+              <div key={k} className="flex justify-between text-sm py-2 border-b border-dashed border-[#e6d0a3] last:border-0 text-[#5c3a21]">
                 <span>{GOODS_POOL.find(g=>g.id===k)?.name || '未知物品'}</span>
-                <span className="font-mono">x{v}</span>
+                <span className="font-mono font-bold bg-[#f0e4d0] px-2 rounded text-[#8b5a3b]">x{v}</span>
               </div>
             ))}
           </div>
@@ -952,15 +998,15 @@ export default function App() {
       )}
 
       {tradeModal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={() => setTradeModal(null)}>
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold mb-2 text-center">
-              {tradeModal.type === 'buy' ? '购买' : '出售'} {tradeModal.good.name}
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm" onClick={() => setTradeModal(null)}>
+          <div className="bg-[#fffcf5] rounded-xl p-6 w-full max-w-sm border-2 border-[#e6d0a3] shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-bold mb-4 text-center text-[#5c3a21] font-serif border-b border-[#e6d0a3] pb-2">
+              {tradeModal.type === 'buy' ? '购入' : '售出'} {tradeModal.good.name}
             </h3>
-            <div className="mb-4">
-              <div className="flex justify-between text-sm text-stone-500 mb-2">
+            <div className="mb-6 bg-[#f8f4eb] p-4 rounded-lg">
+              <div className="flex justify-between text-sm text-[#8b5a3b] mb-2 font-bold">
                 <span>单价: {tradeModal.price}</span>
-                <span>最大: {tradeModal.max}</span>
+                <span>{tradeModal.type === 'buy' ? '限购' : '库存'}: {tradeModal.max}</span>
               </div>
               <div className="flex items-center gap-4">
                 <input 
@@ -969,17 +1015,19 @@ export default function App() {
                   max={tradeModal.max} 
                   value={tradeModal.amount} 
                   onChange={(e) => setTradeModal({...tradeModal, amount: parseInt(e.target.value)})}
-                  className="flex-1"
+                  className="flex-1 accent-[#8b5a3b] h-2 bg-[#e6d0a3] rounded-lg appearance-none cursor-pointer"
                 />
-                <span className="font-mono text-lg font-bold w-12 text-center">{tradeModal.amount}</span>
+                <span className="font-mono text-xl font-bold w-12 text-center text-[#5c3a21] bg-white rounded border border-[#e6d0a3] py-1">{tradeModal.amount}</span>
               </div>
-              <div className="text-center mt-2 font-bold text-orange-600">
-                总价: {tradeModal.price * tradeModal.amount}
+              <div className="text-center mt-3 font-bold text-lg text-[#5c3a21] flex justify-center items-baseline gap-1">
+                总价: <span className="text-2xl">{tradeModal.price * tradeModal.amount}</span> 两
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => setTradeModal(null)} className="flex-1 py-2 bg-stone-200 text-stone-600 rounded-lg">取消</button>
-              <button onClick={confirmTrade} className="flex-1 py-2 bg-orange-600 text-white rounded-lg">确认</button>
+            <div className="flex gap-3">
+              <button onClick={() => setTradeModal(null)} className="flex-1 py-3 bg-[#e6d0a3] text-[#5c3a21] rounded-lg font-bold hover:bg-[#d4b996] transition-colors">取消</button>
+              <button onClick={confirmTrade} className="flex-1 py-3 bg-[#8b5a3b] text-[#f8e8c8] rounded-lg font-bold hover:bg-[#6b442a] shadow-md active:translate-y-0.5 transition-all">
+                确认{tradeModal.type === 'buy' ? '购入' : '售出'}
+              </button>
             </div>
           </div>
         </div>
@@ -1007,75 +1055,77 @@ function SystemModal({ onClose, onExport, onImport, onReset, importText, setImpo
 
   if (showQR) {
     return (
-      <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 p-6" onClick={() => setShowQR(false)}>
-        <div className="relative bg-white p-4 rounded-xl" onClick={e => e.stopPropagation()}>
-          <button onClick={() => setShowQR(false)} className="absolute -top-3 -right-3 bg-white rounded-full p-1 shadow-lg text-stone-500"><X size={20}/></button>
+      <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/80 p-6 backdrop-blur-md" onClick={() => setShowQR(false)}>
+        <div className="relative bg-white p-4 rounded-xl shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <button onClick={() => setShowQR(false)} className="absolute -top-3 -right-3 bg-white rounded-full p-1 shadow-lg text-stone-500 hover:text-stone-800"><X size={20}/></button>
           <img src="./wechat.png" alt="群聊二维码" className="w-64 h-auto rounded-lg"/>
-          <p className="text-center text-stone-500 mt-2 text-sm">长按识别二维码加入群聊</p>
+          <p className="text-center text-stone-500 mt-3 text-sm font-bold">长按识别二维码加入家族群</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="bg-[#f0f2f5] text-stone-800 w-full max-w-sm rounded-xl overflow-hidden shadow-2xl" onClick={e=>e.stopPropagation()}>
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-[#fdfbf7] text-[#5c3a21] w-full max-w-sm rounded-xl overflow-hidden shadow-2xl border border-[#e6d0a3]" onClick={e=>e.stopPropagation()}>
         
         {/* Header */}
-        <div className="bg-white p-4 flex justify-between items-center border-b border-stone-200">
-          <h2 className="text-lg font-bold flex items-center gap-2">设置</h2>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-600"><X/></button>
+        <div className="bg-[#fff] p-4 flex justify-between items-center border-b border-[#e6d0a3]">
+          <h2 className="text-lg font-bold flex items-center gap-2 font-serif"><Settings className="text-[#8b5a3b]"/> 系统设置</h2>
+          <button onClick={onClose} className="text-[#8b5a3b] hover:text-[#5c3a21]"><X/></button>
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="p-5 space-y-5">
           
           {/* Warning Banner */}
-          <div className="bg-red-50 border border-red-100 text-red-700 p-3 rounded-lg text-xs">
-            <p className="font-bold mb-1">升级游戏数据存储</p>
-            请先备份游戏存档，再开始数据迁移，以保持游戏运行流畅。
+          <div className="bg-red-50 border border-red-100 text-red-700 p-3 rounded-lg text-xs flex gap-2 items-start">
+            <AlertCircle size={16} className="shrink-0 mt-0.5"/>
+            <div>
+              <p className="font-bold mb-1">数据安全提示</p>
+              请定期手动【保存进度】并复制存档码，防止浏览器清理缓存导致数据丢失。
+            </div>
           </div>
 
           {/* Group Chat Entry */}
           <div 
-            className="bg-white p-4 rounded-lg shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition-transform"
+            className="bg-white p-4 rounded-lg shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition-transform border border-[#e6d0a3] hover:bg-[#f8f4eb]"
             onClick={() => setShowQR(true)}
           >
             <div>
-              <div className="font-bold text-stone-800">群聊入口</div>
-              <div className="text-xs text-stone-500">点击查看群二维码。</div>
+              <div className="font-bold text-[#5c3a21]">加入家族群</div>
+              <div className="text-xs text-[#8b5a3b]/70">与其他掌柜交流商道心得</div>
             </div>
-            <Users className="text-stone-400" size={24} />
+            <Users className="text-[#8b5a3b]" size={24} />
           </div>
 
           {/* Import/Export Section */}
           <div className="space-y-3">
             <button 
               onClick={onExport} 
-              className="w-full py-3 bg-[#4caf50] hover:bg-[#43a047] text-white rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-sm active:scale-95 transition-transform"
+              className="w-full py-3 bg-[#4caf50] hover:bg-[#43a047] text-white rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-md active:translate-y-0.5 transition-all"
             >
-              <Download size={18}/> 保存进度
+              <Download size={18}/> 保存进度 (导出存档码)
             </button>
 
-            {/* Import Text Area (Hidden by default or simplified) - Keeping textarea for functionality */}
-            <div className="bg-white p-3 rounded-lg shadow-sm">
+            <div className="bg-white p-3 rounded-lg shadow-inner border border-[#e6d0a3]">
                 <textarea 
                 value={importText}
                 onChange={(e)=>setImportText(e.target.value)}
                 placeholder="在此粘贴存档码以读取..."
-                className="w-full bg-stone-50 border-none resize-none focus:ring-0 text-xs h-16 text-stone-600 p-2 rounded mb-2"
+                className="w-full bg-[#f8f4eb] border-none resize-none focus:ring-0 text-xs h-16 text-[#5c3a21] p-2 rounded mb-2 placeholder:text-[#d4b996]"
                 />
                 <button 
                 onClick={onImport} 
-                className="w-full py-3 bg-[#2196f3] hover:bg-[#1e88e5] text-white rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-sm active:scale-95 transition-transform"
+                className="w-full py-2 bg-[#2196f3] hover:bg-[#1e88e5] text-white rounded-lg flex items-center justify-center gap-2 text-xs font-bold shadow-sm active:translate-y-0.5 transition-all"
                 >
-                <Upload size={18}/> 读取进度
+                <Upload size={14}/> 读取进度
                 </button>
             </div>
           </div>
 
           {/* Reset Section */}
-          <div className="pt-2">
+          <div className="pt-2 border-t border-[#e6d0a3]">
             <button 
               onClick={() => {
                 if (resetConfirm) {
@@ -1085,10 +1135,10 @@ function SystemModal({ onClose, onExport, onImport, onReset, importText, setImpo
                   setTimeout(() => setResetConfirm(false), 3000);
                 }
               }} 
-              className={`w-full py-3 border ${resetConfirm ? 'bg-red-50 text-red-600 border-red-200' : 'bg-transparent border-transparent text-stone-400'} rounded-lg flex items-center justify-center gap-2 text-sm transition-all hover:bg-stone-100`}
+              className={`w-full py-3 border ${resetConfirm ? 'bg-red-50 text-red-600 border-red-200 animate-pulse' : 'bg-transparent border-transparent text-stone-400 hover:text-stone-600'} rounded-lg flex items-center justify-center gap-2 text-xs transition-all`}
             >
-              {resetConfirm ? <Trash2 size={16}/> : <LogOut size={16}/>}
-              {resetConfirm ? '再次点击确认删除所有存档' : '重新开启人生'}
+              {resetConfirm ? <Trash2 size={14}/> : <LogOut size={14}/>}
+              {resetConfirm ? '再次点击确认删除所有存档 (慎重!)' : '重新开启人生'}
             </button>
           </div>
         </div>
