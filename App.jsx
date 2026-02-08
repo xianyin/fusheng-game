@@ -153,6 +153,7 @@ export default function App() {
   const [showBag, setShowBag] = useState(false);
   const [showSystem, setShowSystem] = useState(false);
   const [showHelp, setShowHelp] = useState(false); 
+  const [showQR, setShowQR] = useState(false); // 提升群聊弹窗状态
   const [importText, setImportText] = useState("");
   const [tradeModal, setTradeModal] = useState(null); 
   const logsEndRef = useRef(null);
@@ -237,6 +238,13 @@ export default function App() {
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
   }, [day, cash, inventory, rank, skills, generation, relationships, isLoaded, gameStarted]);
+
+  // 【Bug修复】：监听健康值，强制死亡
+  useEffect(() => {
+    if (gameStarted && health <= 0) {
+      handleEndGeneration('病逝');
+    }
+  }, [health, gameStarted]);
 
   const exportSave = () => {
     const data = localStorage.getItem(SAVE_KEY);
@@ -404,6 +412,8 @@ export default function App() {
     setMyIndustries(newIndustries);
 
     let healthChange = 0;
+    
+    // 预计算健康值变化
     if (targetCityId) {
       const baseCost = 80;
       const discount = rank >= 1 ? 0.8 : 1;
@@ -425,6 +435,7 @@ export default function App() {
       dailyLog.push(`修整${daysPass}天。`);
     }
 
+    // 3. 房产收益
     let propIncome = 0;
     const incomeBuff = Object.values(relationships).some(r => r.following && r.lv>=3) ? 1.5 : 1;
     myProperties.forEach(p => {
@@ -437,7 +448,10 @@ export default function App() {
     }
 
     setDay(newDay);
-    setHealth(h => Math.min(activeTalent?.type==='health'?150:100, Math.max(0, h + healthChange)));
+    // 更新健康值
+    const newHealth = Math.min(activeTalent?.type==='health'?150:100, Math.max(0, health + healthChange));
+    setHealth(newHealth);
+    
     refreshPrices(cities, newDay);
     
     if (Math.floor((day % 365) / 15) !== termIdx) {
@@ -445,9 +459,10 @@ export default function App() {
     }
 
     dailyLog.forEach(l => addLog(l));
-
-    if (health + healthChange <= 0 || newDay >= 365 * 3) { 
-      handleEndGeneration(health + healthChange <= 0 ? '病逝' : '寿终正寝');
+    
+    // 【Bug修复】: 立即检查死亡，防止还能操作
+    if (newHealth <= 0 || newDay >= 365 * 3) { 
+      handleEndGeneration(newHealth <= 0 ? '病逝' : '寿终正寝');
     }
   };
 
@@ -501,6 +516,9 @@ export default function App() {
   };
 
   const handleEndGeneration = (reason) => {
+    // 防止重复触发
+    if (!gameStarted) return;
+    
     const totalAssets = calculateTotalAssets();
     const historyEntry = {
       gen: generation,
@@ -628,7 +646,7 @@ export default function App() {
           </div>
         </div>
 
-        {showSystem && <SystemModal onClose={()=>setShowSystem(false)} onExport={exportSave} onImport={importSave} onReset={hardReset} importText={importText} setImportText={setImportText} />}
+        {showSystem && <SystemModal onClose={()=>setShowSystem(false)} onExport={exportSave} onImport={importSave} onReset={hardReset} importText={importText} setImportText={setImportText} showQR={showQR} setShowQR={setShowQR} />}
       </div>
     );
   }
@@ -661,7 +679,8 @@ export default function App() {
             </div>
           </div>
           <div className="flex gap-2">
-             <button onClick={()=>setShowHelp(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><HelpCircle size={18}/></button>
+             <button onClick={() => setShowQR(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><Users size={18}/></button>
+             <button onClick={() => setShowHelp(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><HelpCircle size={18}/></button>
              <button onClick={() => setShowSystem(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><Settings size={18}/></button>
              <button onClick={() => setShowBag(true)} className="p-2 bg-[#3e2716] rounded-full hover:bg-[#4e311b] border border-[#8b5a3b] text-[#f8e8c8]"><Backpack size={18}/></button>
           </div>
@@ -1077,6 +1096,18 @@ export default function App() {
         </div>
       )}
 
+      {/* 二维码弹窗（放在最外层，确保 z-index 最高） */}
+      {showQR && (
+        <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/80 p-6 backdrop-blur-md" onClick={() => setShowQR(false)}>
+          <div className="relative bg-white p-4 rounded-xl shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowQR(false)} className="absolute -top-3 -right-3 bg-white rounded-full p-1 shadow-lg text-stone-500 hover:text-stone-800"><X size={20}/></button>
+            <img src="./wechat.png" alt="群聊二维码" className="w-64 h-auto rounded-lg"/>
+            <p className="text-center text-stone-600 mt-3 text-sm font-bold bg-stone-100 py-1 rounded">vx：niuda113114</p>
+            <p className="text-center text-stone-400 mt-1 text-xs">长按识别二维码加入家族群</p>
+          </div>
+        </div>
+      )}
+
       {showSystem && (
         <SystemModal 
           onClose={()=>setShowSystem(false)} 
@@ -1085,6 +1116,8 @@ export default function App() {
           onReset={hardReset} 
           importText={importText} 
           setImportText={setImportText} 
+          showQR={showQR}
+          setShowQR={setShowQR}
         />
       )}
 
@@ -1093,21 +1126,8 @@ export default function App() {
 }
 
 // 独立的系统设置组件 (Refined UI)
-function SystemModal({ onClose, onExport, onImport, onReset, importText, setImportText }) {
+function SystemModal({ onClose, onExport, onImport, onReset, importText, setImportText, showQR, setShowQR }) {
   const [resetConfirm, setResetConfirm] = useState(false);
-  const [showQR, setShowQR] = useState(false);
-
-  if (showQR) {
-    return (
-      <div className="absolute inset-0 z-[70] flex items-center justify-center bg-black/80 p-6 backdrop-blur-md" onClick={() => setShowQR(false)}>
-        <div className="relative bg-white p-4 rounded-xl shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-          <button onClick={() => setShowQR(false)} className="absolute -top-3 -right-3 bg-white rounded-full p-1 shadow-lg text-stone-500 hover:text-stone-800"><X size={20}/></button>
-          <img src="./wechat.png" alt="群聊二维码" className="w-64 h-auto rounded-lg"/>
-          <p className="text-center text-stone-500 mt-3 text-sm font-bold">长按识别二维码加入家族群</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={onClose}>
@@ -1129,18 +1149,6 @@ function SystemModal({ onClose, onExport, onImport, onReset, importText, setImpo
               <p className="font-bold mb-1">数据安全提示</p>
               请定期手动【保存进度】并复制存档码，防止浏览器清理缓存导致数据丢失。
             </div>
-          </div>
-
-          {/* Group Chat Entry */}
-          <div 
-            className="bg-white p-4 rounded-lg shadow-sm flex justify-between items-center cursor-pointer active:scale-95 transition-transform border border-[#e6d0a3] hover:bg-[#f8f4eb]"
-            onClick={() => setShowQR(true)}
-          >
-            <div>
-              <div className="font-bold text-[#5c3a21]">加入家族群</div>
-              <div className="text-xs text-[#8b5a3b]/70">与其他掌柜交流商道心得</div>
-            </div>
-            <Users className="text-[#8b5a3b]" size={24} />
           </div>
 
           {/* Import/Export Section */}
